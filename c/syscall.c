@@ -1,66 +1,132 @@
 /* syscall.c : syscalls
- */
+*/
 
 #include <xeroskernel.h>
 #include <stdarg.h>
 
+/* Your code goes here */
 
-int syscall( int req, ... ) {
-/**********************************/
 
-    va_list     ap;
-    int         rc;
+int syscall(int call);
+int syscall2(int call, ...);
+void sysyield( void );
+unsigned int syscreate( void (*func)(void), int stack);
+void sysstop( void );
+int sysgetpid( void );
+void sysputs(char *str);
+int syskill(int pid);
+int syssend(int dest_pid, unsigned long num);
+int sysrecv(unsigned int *from_pid, unsigned long *num);
+int syssleep( unsigned int milliseconds );
 
-    va_start( ap, req );
-
-    __asm __volatile( " \
-        movl %1, %%eax \n\
-        movl %2, %%edx \n\
-        int  %3 \n\
-        movl %%eax, %0 \n\
-        "
-        : "=g" (rc)
-        : "g" (req), "g" (ap), "i" (KERNEL_INT)
-        : "%eax" 
-    );
- 
-    va_end( ap );
-
-    return( rc );
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  syscall
+ *  Description:  pushes one arguments on to stack 
+ * =====================================================================================
+ */
+int syscall(int call){
+    int result = 0;
+    __asm__ __volatile__("pushl 8(%%ebp)\n\t"
+            "int $67\n\t"
+            "movl %%eax, %0\n\t"
+            "popl %%eax"
+            :"=r"(result)
+            : 
+            :"%eax"
+            ); 
+    return result;
 }
 
-int syscreate( funcptr fp, size_t stack ) {
-/*********************************************/
-
-    return( syscall( SYS_CREATE, fp, stack ) );
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  syscall2
+ *  Description:  pushes two arguments on to stack 
+ * =====================================================================================
+ */
+int syscall2(int call, ... ){
+    int result = 0;
+    __asm__ __volatile__("pushl 12(%%ebp)\n\t"
+            "pushl 8(%%ebp)\n\t"
+            "int $67\n\t"
+            "movl %%eax, %0\n\t"
+            "popl %%eax\n\t"
+            "popl %%eax"
+            : "=r"(result)
+            : 
+            :"%eax"
+            );
+    return result;
 }
 
-void sysyield( void ) {
-/***************************/
-  syscall( SYS_YIELD );
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  syscall3
+ *  Description:  pushes three arguments on to stack 
+ * =====================================================================================
+ */
+int syscall3(int call, ... ){
+    int result = 0;
+    __asm__ __volatile__("pushl 16(%%ebp)\n\t"
+            "pushl 12(%%ebp)\n\t"
+            "pushl 8(%%ebp)\n\t"
+            "int $67\n\t"
+            "movl %%eax, %0\n\t"
+            "popl %%eax\n\t"
+            "popl %%eax\n\t"
+            "popl %%eax"
+            : "=r"(result)
+            : 
+            :"%eax"
+            );
+    return result;
 }
 
- void sysstop( void ) {
-/**************************/
-
-   syscall( SYS_STOP );
+unsigned int syscreate( void (*func)(void), int stack){
+    if (!func) {
+        return 0;
+    }
+    return syscall3(CREATE, func, stack);
 }
 
-unsigned int sysgetpid( void ) {
-/****************************/
-
-    return( syscall( SYS_GETPID ) );
+void sysyield( void ){
+    syscall(YIELD);
 }
 
-void sysputs( char *str ) {
-/********************************/
-
-    syscall( SYS_PUTS, str );
+void sysstop( void ){
+    syscall(STOP);
 }
 
-unsigned int syssleep( unsigned int t ) {
-/*****************************/
-
-    return syscall( SYS_SLEEP, t );
+int sysgetpid( void ) {
+    return syscall(GETPID);
 }
 
+void sysputs(char *str) {
+    if (!str) {
+        return;
+    }
+    syscall2(PUTS, str);
+}
+
+int syskill(int pid) {
+    return syscall2(KILL, pid);
+}
+
+int syssend(int dest_pid, unsigned long num) {
+    if (dest_pid < 1) {
+        return -1;
+    }
+    return syscall3(SEND, dest_pid, num);
+}
+
+int sysrecv(unsigned int *from_pid, unsigned long *num) {
+    if (!from_pid || !num) {
+        return -3;
+    }
+    return syscall3(RECEIVE, from_pid, num);
+}
+
+int syssleep( unsigned int milliseconds ){
+    return syscall2(SLEEP, milliseconds);
+
+}
