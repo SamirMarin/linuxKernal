@@ -2,6 +2,7 @@
 */
 
 #include <xeroskernel.h>
+#include <i386.h>
 #include <stdarg.h>
 
 struct pcb *readyQueueHead;
@@ -52,10 +53,10 @@ void dispatch(void) {
                 }
             case(TIMER_INT):
                 {
-                    ready(process, &readyQueueHead, &readyQueueTail);
                     tick();
+                    process->cpuTime++;
+                    ready(process, &readyQueueHead, &readyQueueTail);
                     process = next(&readyQueueHead, &readyQueueTail);
-                    //kprintf("\n hey look my pid is %d", process->pid);
                     end_of_intr();
                     break;
                 }
@@ -300,29 +301,42 @@ struct pcb* runIdleIfReadyEmpty(struct pcb **head){
 
 extern char * maxaddr;
   
-int getCPUtimes(pcb *p, processStatuses *ps) {
+int getCPUtimes(struct pcb *p, struct processStatuses *ps) {
   
   int i, currentSlot;
   currentSlot = -1;
 
   // Check if address is in the hole
-  if (((unsigned long) ps) >= HOLESTART && ((unsigned long) ps <= HOLEEND)) 
+  if (((unsigned long) ps) >= HOLESTART && ((unsigned long) ps <= HOLEEND)) {
     return -1;
+  }
 
   //Check if address of the data structure is beyone the end of main memory
-  if ((((char * ) ps) + sizeof(processStatuses)) > maxaddr)  
+  if ((((char * ) ps) + sizeof(struct processStatuses)) > maxaddr)  {
     return -2;
+  }
 
   // There are probably other address checks that can be done, but this is OK for now
 
 
-  for (i=0; i < MAX_PROC; i++) {
-    if (proctab[i].state != STATE_STOPPED) {
+  for (i=0; i < PCBTABLESIZE; i++) {
+    struct pcb *currentProcess = &pcbTable[i];
+    if (currentProcess->pid != -1) {
       // fill in the table entry
       currentSlot++;
-      ps->pid[currentSlot] = proctab[i].pid;
-      ps->status[currentSlot] = p->pid == proctab[i].pid ? STATE_RUNNING: proctab[i].state;
-      ps->cpuTime[currentSlot] = proctab[i].cpuTime * MILLISECONDS_TICK;
+      ps->pid[currentSlot] = currentProcess->pid; 
+      struct pcb ** head = currentProcess->head;
+      if(head == &readyQueueHead){
+          ps->status[currentSlot] = STATE_READY;
+      } else if (head == &sleepQueueHead) {
+          ps->status[currentSlot] = STATE_SLEEP;
+      } else if (p == currentProcess){
+          ps->status[currentSlot] = STATE_RUNNING;
+      } else {
+          kprintf("\n\n UNKNOWN STATE OF PROCESS");
+          for(;;);
+      }
+      ps->cpuTime[currentSlot] = currentProcess->cpuTime * TICKLENGTH;
     }
   }
 

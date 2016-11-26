@@ -12,6 +12,7 @@ extern char	*maxaddr;	/* max memory address (set in i386.c)	*/
 struct pcb *pcbTable;
 
 void initProcessTable( void );
+static void idleproc( void );
 
 /************************************************************************/
 /***				NOTE:				      ***/
@@ -117,3 +118,8 @@ void initProcessTable( void ){
 
 }
 
+static void idleproc( void ){
+    for(;;){
+        sysyield();
+    }
+}

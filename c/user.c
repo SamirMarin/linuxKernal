@@ -235,7 +235,7 @@ void     root( void ) {
     sysputs( buff );
 
 
-    processStatuses psTab;
+    struct processStatuses psTab;
     int procs;
     
 

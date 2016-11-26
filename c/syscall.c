@@ -131,9 +131,9 @@ int syssleep( unsigned int milliseconds ){
 
 }
 
-int sysgetcputimes(processStatuses *ps) {
+int sysgetcputimes(struct processStatuses *ps) {
     if (!ps) {
         return -2;
     }
-    return syscall2(SYS_CPUTIMES, ps);
+    return syscall2(CPU_TIMES, ps);
 }

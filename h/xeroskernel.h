@@ -44,9 +44,18 @@ void           set_evec(unsigned int xnum, unsigned long handler);
 
 // Global Constants 
 #define PCBTABLESIZE 32
+//constants to track state that a process is in
+#define STATE_STOPPED 0
+#define STATE_READY 1
+#define STATE_SLEEP 22
+#define STATE_RUNNING 23
+#define STATE_SEND 24
+#define STATE_RECV 25
+
 //Time slice constant
 #define TIMESLICE 100 // must change both these values. one is dependent on the other
 #define TICKLENGTH 10 // assuming 1 tick is 10ms based on the TIMESLICE constant above
+
 // init.c functions
 extern struct pcb *pcbTable;
 // mem.c functions
@@ -68,6 +77,7 @@ extern struct pcb *sleepQueueTail; //points to idle process
 extern struct pcb* next(struct pcb **head, struct pcb **tail);
 extern int ready(struct pcb *process, struct pcb **head, struct pcb **tail);
 extern void removeNthPCB(struct pcb *process);
+
 //stores cpu context
 struct CPU {
     unsigned long edi;
@@ -82,6 +92,7 @@ struct CPU {
     unsigned long iret_cs;
     unsigned long eflags;
 };
+
 //stores process information
 struct pcb {
     int pid; // process ID
@@ -93,6 +104,7 @@ struct pcb {
     unsigned long sp;//most current stack pointer for the process
     int rc;
     unsigned int tick;
+    long cpuTime;
     struct CPU *cpuState;// pointer to the cpu struct
     struct pcb *next;// pointer to next pcp in the queue
     struct pcb *prev;
@@ -104,6 +116,7 @@ struct pcb {
     struct pcb *recvQTail;
 
 };
+
 // enum representing type of system calls available
 enum SystemEvents {
     CREATE,
@@ -118,8 +131,8 @@ enum SystemEvents {
     SLEEP,
     CPU_TIMES
 };
-typedef struct struct_ps processStatuses;
-struct struct_ps {
+
+struct processStatuses {
   int  pid[PCBTABLESIZE];      // The process ID
   int  status[PCBTABLESIZE];   // The process status
   long  cpuTime[PCBTABLESIZE]; // CPU time used in milliseconds
@@ -143,11 +156,9 @@ extern int syskill(int pid);
 extern int syssend(int dest_pid, unsigned long num);
 extern int sysrecv(unsigned int *from_pid, unsigned long *num);
 extern int syssleep( unsigned int milliseconds );
-extern int sysgetcputimes(processStatuses *ps);
+extern int sysgetcputimes(struct processStatuses *ps);
 // user.c 
 extern void root(void);
-extern void idleproc(void);
-extern void testStop(void);
 // msg.c
 extern int send(int dest_pid, unsigned long num, struct pcb * currentProcess);
 extern int recv(unsigned int *from_pid, unsigned long *num, struct pcb * currentProcess);
