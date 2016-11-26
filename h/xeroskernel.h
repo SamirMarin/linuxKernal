@@ -115,8 +115,16 @@ enum SystemEvents {
     SEND,
     RECEIVE,
     TIMER_INT,
-    SLEEP
+    SLEEP,
+    CPU_TIMES
 };
+typedef struct struct_ps processStatuses;
+struct struct_ps {
+  int  pid[PCBTABLESIZE];      // The process ID
+  int  status[PCBTABLESIZE];   // The process status
+  long  cpuTime[PCBTABLESIZE]; // CPU time used in milliseconds
+};
+
 // ctsw.c functions
 extern int contextswitch(struct pcb* process);
 extern void contextinit(void);
@@ -135,6 +143,7 @@ extern int syskill(int pid);
 extern int syssend(int dest_pid, unsigned long num);
 extern int sysrecv(unsigned int *from_pid, unsigned long *num);
 extern int syssleep( unsigned int milliseconds );
+extern int sysgetcputimes(processStatuses *ps);
 // user.c 
 extern void root(void);
 extern void idleproc(void);
@@ -145,7 +154,6 @@ extern int recv(unsigned int *from_pid, unsigned long *num, struct pcb * current
 // sleep.c
 extern unsigned int sleep(unsigned int ms, struct pcb * process);
 extern void tick(void);
-
 
 
 

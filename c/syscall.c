@@ -130,3 +130,10 @@ int syssleep( unsigned int milliseconds ){
     return syscall2(SLEEP, milliseconds);
 
 }
+
+int sysgetcputimes(processStatuses *ps) {
+    if (!ps) {
+        return -2;
+    }
+    return syscall2(SYS_CPUTIMES, ps);
+}
