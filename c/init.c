@@ -100,11 +100,11 @@ void initProcessTable( void ){
     struct pcb *pcbTableHead = pcbTable; 
     int i;
     for (i = 0; i < PCBTABLESIZE; i++) {
-        (pcbTableHead + i)->pid = -1;
-        (pcbTableHead + i)->index = i+1;
-        (pcbTableHead + i)->reuseCount = -1;
-        (pcbTableHead + i)->head = &stopQueueHead;
-        (pcbTableHead + i)->tail = &stopQueueTail;
+        pcbTableHead[i].pid = -1;
+        pcbTableHead[i].index = i+1;
+        pcbTableHead[i].reuseCount = -1;
+        pcbTableHead[i].head = &stopQueueHead;
+        pcbTableHead[i].tail = &stopQueueTail;
         ready(pcbTableHead+i, &stopQueueHead, &stopQueueTail);
     }
     //struct pcb *pcbTableHeadTest = pcbTable;

@@ -15,7 +15,7 @@ void busy( void ) {
   for (i = 0; i < 10; i++) {
     sprintf(buff, "My pid is %d\n", myPid);
     sysputs(buff);
-    if (myPid == 2 && count == 1) syskill(3);
+    if (myPid == 2 && count == 1) syskill(3, 31);
     count++;
     sysyield();
   }
@@ -138,9 +138,9 @@ void     root( void ) {
     proc_pid = syscreate(&busy, 1024);
     con_pid = syscreate(&busy, 1024);
     sysyield();
-    syskill(proc_pid);
+    syskill(proc_pid, 31);
     sysyield();
-    syskill(con_pid);
+    syskill(con_pid, 31);
 
     
     for(i = 0; i < 5; i++) {
@@ -149,14 +149,14 @@ void     root( void ) {
 
     sysyield();
     
-    syskill(pids[3]);
+    syskill(pids[3], 31);
     sysyield();
-    syskill(pids[2]);
-    syskill(pids[4]);
+    syskill(pids[2], 31);
+    syskill(pids[4], 31);
     sysyield();
-    syskill(pids[0]);
+    syskill(pids[0], 31);
     sysyield();
-    syskill(pids[1]);
+    syskill(pids[1], 31);
     sysyield();
 
     syssleep(8000);;
@@ -181,7 +181,7 @@ void     root( void ) {
     pids[2] = syscreate(&sleep3, 1024);
 
     syssleep(110);
-    syskill(pids[1]);
+    syskill(pids[1], 31);
     syssleep(8000);;
 
     kprintf("***********Sleeping kill last 3000 *****\n");
@@ -191,7 +191,7 @@ void     root( void ) {
     pids[2] = syscreate(&sleep3, 1024);
 
     sysyield();
-    syskill(pids[2]);
+    syskill(pids[2], 31);
     syssleep(8000);;
 
     kprintf("***********Sleeping kill first process 1000*****\n");
@@ -201,7 +201,7 @@ void     root( void ) {
     pids[2] = syscreate(&sleep3, 1024);
 
     syssleep(100);
-    syskill(pids[0]);
+    syskill(pids[0], 31);
     syssleep(8000);;
 
     // Now test for 1 process
@@ -211,7 +211,7 @@ void     root( void ) {
     pids[0] = syscreate(&sleep2, 1024);
 
     sysyield();
-    syskill(pids[0]);
+    syskill(pids[0], 31);
     syssleep(8000);;
 
     kprintf("***********One sleeping process, not killed***\n");

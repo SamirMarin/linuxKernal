@@ -49,8 +49,7 @@ void           set_evec(unsigned int xnum, unsigned long handler);
 #define STATE_READY 1
 #define STATE_SLEEP 22
 #define STATE_RUNNING 23
-#define STATE_SEND 24
-#define STATE_RECV 25
+#define STATE_BLOCKED 24
 
 //Time slice constant
 #define TIMESLICE 100 // must change both these values. one is dependent on the other
@@ -98,13 +97,14 @@ struct pcb {
     int pid; // process ID
     int index; // index of pcb inside process table 
     int reuseCount; 
-    int parentPid; // not using currently
+    int state; 
     unsigned long *args; // pointer to system call type and arguments on process stack
     unsigned long *memoryStart; //pointer to the allocated stack for the process
     unsigned long sp;//most current stack pointer for the process
     int rc;
     unsigned int tick;
     long cpuTime;
+    long signalBitMask;
     struct CPU *cpuState;// pointer to the cpu struct
     struct pcb *next;// pointer to next pcp in the queue
     struct pcb *prev;
@@ -152,7 +152,7 @@ extern void sysstop(void);
 extern unsigned int syscreate(void (*func)(void), int stack);
 extern int sysgetpid( void );
 extern void sysputs(char *str);
-extern int syskill(int pid);
+extern int syskill(int pid, int signalNumber);
 extern int syssend(int dest_pid, unsigned long num);
 extern int sysrecv(unsigned int *from_pid, unsigned long *num);
 extern int syssleep( unsigned int milliseconds );
@@ -165,6 +165,8 @@ extern int recv(unsigned int *from_pid, unsigned long *num, struct pcb * current
 // sleep.c
 extern unsigned int sleep(unsigned int ms, struct pcb * process);
 extern void tick(void);
+// signal.c
+extern int signal(int pid, int sig_no);
 
 
 

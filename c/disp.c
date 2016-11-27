@@ -27,6 +27,8 @@ int killProcess(int pid, int currentPid);
 void removeNthPCB(struct pcb *process);
 void clearWaitingProcesses(struct pcb **head, struct pcb **tail);
 void testCleanup(void);
+void setupSignalStack(struct pcb *process);
+void setProcessState(struct pcb *p, struct pcb **head, struct pcb **tail);
 struct pcb* runIdleIfReadyEmpty(struct pcb **head);
 
 /* 
@@ -40,6 +42,7 @@ void dispatch(void) {
     struct pcb *process = next(&readyQueueHead, &readyQueueTail);
 
     while (1) {
+        setupSignalStack(process);
         int request = contextswitch(process);
 
         switch( request ) {
@@ -86,7 +89,10 @@ void dispatch(void) {
             case(KILL): 
                 {
                     int pid = (int) *(process->args + 1);
-                    process->rc = killProcess(pid, process->pid);
+                    int sig_no = (int) *(process->args + 2);
+                    // Old kill code, need to change after A3 is completed
+                    //process->rc = killProcess(pid, process->pid);
+                    process->rc = signal(pid, sig_no);
                     break;
                 }
             case(SEND):
@@ -175,6 +181,71 @@ int killProcess(int pid, int currentPid){
     return 0;
 }
 
+// This function is the system side of the sysgetcputimes call.
+// It places into a the structure being pointed to information about
+// each currently active process.
+//  p - a pointer into the pcbtab of the currently active process
+//  ps  - a pointer to a processStatuses structure that is
+//        filled with information about all the processes currently in the system
+//
+
+extern char * maxaddr;
+  
+int getCPUtimes(struct pcb *p, struct processStatuses *ps) {
+  
+  int i, currentSlot;
+  currentSlot = -1;
+
+  // Check if address is in the hole
+  if (((unsigned long) ps) >= HOLESTART && ((unsigned long) ps <= HOLEEND)) {
+    return -1;
+  }
+
+  //Check if address of the data structure is beyone the end of main memory
+  if ((((char * ) ps) + sizeof(struct processStatuses)) > maxaddr)  {
+    return -2;
+  }
+
+  // There are probably other address checks that can be done, but this is OK for now
+
+
+  for (i=0; i < PCBTABLESIZE; i++) {
+    struct pcb *currentProcess = &pcbTable[i];
+    if (currentProcess->state != STATE_STOPPED) {
+      // fill in the table entry
+      currentSlot++;
+      ps->pid[currentSlot] = currentProcess->pid;
+      ps->status[currentSlot] = p == currentProcess ? STATE_RUNNING : currentProcess->state;
+      ps->cpuTime[currentSlot] = currentProcess->cpuTime * TICKLENGTH;
+    }
+  }
+
+  return currentSlot;
+}
+
+
+
+void setupSignalStack(struct pcb* process) {
+    unsigned long * oldSP = (unsigned long *) process->sp;
+    unsigned long * oldcntx = oldSP;
+    oldSP = oldSP - 1;
+    *oldSP = (unsigned long) oldSP;
+    oldSP = oldSP - 1;
+    *oldSP = (unsigned long) oldcntx;
+
+    // Need to replace with the function for the signal handler
+    //*(oldSP - 3) = cntx;
+
+    struct CPU* context = (struct CPU*) oldSP;
+
+    // Move context down by the size of the CPU struct;
+    context = context - 1;
+
+
+
+
+}
+
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:  removeNthPCB
@@ -236,6 +307,7 @@ int ready(struct pcb *process, struct pcb **head, struct pcb **tail){
         process->next = NULL;
         process->head = head;
         process->tail = tail;
+        setProcessState(process, head, tail);
         return 1;
     }
     if(*head && *tail){
@@ -245,6 +317,7 @@ int ready(struct pcb *process, struct pcb **head, struct pcb **tail){
         process->head = head;
         process->tail = tail;
         (*tail)->next = NULL;
+        setProcessState(process, head, tail);
         return 1;
     }
     kprintf("\n\n one of readyQueueHead or readyQueueTail is NULL\n file: disp.c\n function: ready");
@@ -291,57 +364,18 @@ struct pcb* runIdleIfReadyEmpty(struct pcb **head){
     return NULL;
 }
 
-// This function is the system side of the sysgetcputimes call.
-// It places into a the structure being pointed to information about
-// each currently active process. 
-//  p - a pointer into the pcbtab of the currently active process
-//  ps  - a pointer to a processStatuses structure that is 
-//        filled with information about all the processes currently in the system
-//
-
-extern char * maxaddr;
-  
-int getCPUtimes(struct pcb *p, struct processStatuses *ps) {
-  
-  int i, currentSlot;
-  currentSlot = -1;
-
-  // Check if address is in the hole
-  if (((unsigned long) ps) >= HOLESTART && ((unsigned long) ps <= HOLEEND)) {
-    return -1;
-  }
-
-  //Check if address of the data structure is beyone the end of main memory
-  if ((((char * ) ps) + sizeof(struct processStatuses)) > maxaddr)  {
-    return -2;
-  }
-
-  // There are probably other address checks that can be done, but this is OK for now
-
-
-  for (i=0; i < PCBTABLESIZE; i++) {
-    struct pcb *currentProcess = &pcbTable[i];
-    if (currentProcess->pid != -1) {
-      // fill in the table entry
-      currentSlot++;
-      ps->pid[currentSlot] = currentProcess->pid; 
-      struct pcb ** head = currentProcess->head;
-      if(head == &readyQueueHead){
-          ps->status[currentSlot] = STATE_READY;
-      } else if (head == &sleepQueueHead) {
-          ps->status[currentSlot] = STATE_SLEEP;
-      } else if (p == currentProcess){
-          ps->status[currentSlot] = STATE_RUNNING;
-      } else {
-          kprintf("\n\n UNKNOWN STATE OF PROCESS");
-          for(;;);
-      }
-      ps->cpuTime[currentSlot] = currentProcess->cpuTime * TICKLENGTH;
+void setProcessState(struct pcb *p, struct pcb **head, struct pcb **tail) {
+    if (head == readyQueueHead && tail == readyQueueTail) {
+        p->state = STATE_READY;
+    } else if (head == stopQueueHead && tail == stopQueueTail) {
+        p->state = STATE_STOPPED;
+    } else if (head == sleepQueueHead && tail == sleepQueueTail) {
+        p->state = STATE_SLEEP;
+    } else {
+        p->state = STATE_BLOCKED;
     }
-  }
-
-  return currentSlot;
 }
+
 
 //Test function for cleanup
 void testCleanup(void){

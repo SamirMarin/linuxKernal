@@ -14,7 +14,7 @@ unsigned int syscreate( void (*func)(void), int stack);
 void sysstop( void );
 int sysgetpid( void );
 void sysputs(char *str);
-int syskill(int pid);
+int syskill(int pid, int signalNumber);
 int syssend(int dest_pid, unsigned long num);
 int sysrecv(unsigned int *from_pid, unsigned long *num);
 int syssleep( unsigned int milliseconds );
@@ -108,8 +108,15 @@ void sysputs(char *str) {
     syscall2(PUTS, str);
 }
 
-int syskill(int pid) {
-    return syscall2(KILL, pid);
+int syskill(int pid, int signalNumber) {
+    int res = syscall3(KILL, pid, signalNumber);
+    if (res == -1) {
+        return -712;
+    } else if (res == -2) {
+        return -651;
+    } else {
+        return 0;
+    }
 }
 
 int syssend(int dest_pid, unsigned long num) {

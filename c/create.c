@@ -98,6 +98,7 @@ struct pcb * setup_pcb(void (*func)(void), int stackSize) {
     newPcb->cpuState->iret_cs = getCS();
     newPcb->cpuState->eflags = ENABLE_INTERRUPTS;
     newPcb->reuseCount += 1;
+    newPcb->signalBitMask = 0;
     if (newPcb->reuseCount > MAX_REUSE_COUNT) {
         newPcb->reuseCount = 1;
     }
