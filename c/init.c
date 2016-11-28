@@ -73,8 +73,8 @@ void initproc( void )				/* The beginning */
     }
     initProcessTable();
 
+    create(&idleproc, 8000);
     create(&root, 8000);
-    createIdle(&idleproc, 8000);
     //testing function for stopping process.
     //int restest = create(&testStop, 7989);
     //kprintf("Root PID is %d", res);
@@ -101,7 +101,7 @@ void initProcessTable( void ){
     int i;
     for (i = 0; i < PCBTABLESIZE; i++) {
         pcbTableHead[i].pid = -1;
-        pcbTableHead[i].index = i+1;
+        pcbTableHead[i].index = i;
         pcbTableHead[i].reuseCount = -1;
         pcbTableHead[i].head = &stopQueueHead;
         pcbTableHead[i].tail = &stopQueueTail;

@@ -33,6 +33,8 @@ int create(void (*func)(void), int stackSize) {
     return process->pid;
 }
 
+//TODO: remove function I don't think we need it anymore we can call idle first and use index starting from zero this way
+//idle will always be assigned a zero.
 int createIdle(void (*func)(void), int stackSize) {
     /* 
      * ===  FUNCTION  ======================================================================

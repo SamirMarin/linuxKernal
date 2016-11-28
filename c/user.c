@@ -13,7 +13,7 @@ void busy( void ) {
   myPid = sysgetpid();
   
   for (i = 0; i < 10; i++) {
-    sprintf(buff, "My pid is %d\n", myPid);
+    sprintf(buff, "My pid is %d and my count in %d\n", myPid, count);
     sysputs(buff);
     if (myPid == 2 && count == 1) syskill(3, 31);
     count++;
@@ -130,7 +130,10 @@ void     root( void ) {
     int proc_pid, con_pid;
     int i;
 
+    int rootPid = sysgetpid();
     sysputs("Root has been called\n");
+    sprintf(buff, "Root pid is %d\n", rootPid);
+    sysputs(buff);
 
 
     // Test for ready queue removal. 
