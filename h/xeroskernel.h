@@ -44,12 +44,15 @@ void           set_evec(unsigned int xnum, unsigned long handler);
 
 // Global Constants 
 #define PCBTABLESIZE 32
+#define SIGNALMAX 31
 //constants to track state that a process is in
 #define STATE_STOPPED 0
 #define STATE_READY 1
 #define STATE_SLEEP 22
 #define STATE_RUNNING 23
-#define STATE_BLOCKED 24
+#define STATE_RECV 29
+#define STATE_SEND 34 
+#define STATE_WAITING 47
 
 //Time slice constant
 #define TIMESLICE 100 // must change both these values. one is dependent on the other
@@ -104,7 +107,8 @@ struct pcb {
     int rc;
     unsigned int tick;
     long cpuTime;
-    long signalBitMask;
+    unsigned long signalBitMask;
+    void (*sigFunctions[SIGNALMAX+1])(void*); //array of function pointers for signal
     struct CPU *cpuState;// pointer to the cpu struct
     struct pcb *next;// pointer to next pcp in the queue
     struct pcb *prev;
@@ -114,6 +118,8 @@ struct pcb {
     struct pcb *sendQTail;
     struct pcb *recvQHead;// pointer to the list of pcb's that want to recv from this pcb
     struct pcb *recvQTail;
+    struct pcb *waitQHead;// pointer to the list of pcb's that are waiting for this process to die
+    struct pcb *waitQTail;
 
 };
 
@@ -129,7 +135,10 @@ enum SystemEvents {
     RECEIVE,
     TIMER_INT,
     SLEEP,
-    CPU_TIMES
+    CPU_TIMES,
+    SIG_HANDLER,
+    SIG_RETURN,
+    WAIT
 };
 
 struct processStatuses {
@@ -157,6 +166,8 @@ extern int syssend(int dest_pid, unsigned long num);
 extern int sysrecv(unsigned int *from_pid, unsigned long *num);
 extern int syssleep( unsigned int milliseconds );
 extern int sysgetcputimes(struct processStatuses *ps);
+extern int syssighandler(int signal, void(*newHandler)(void*), void(**oldHandler)(void*)) ;
+extern int syssigreturn(void *old_sp);
 // user.c 
 extern void root(void);
 // msg.c
@@ -167,7 +178,7 @@ extern unsigned int sleep(unsigned int ms, struct pcb * process);
 extern void tick(void);
 // signal.c
 extern int signal(int pid, int sig_no);
-
+extern void sigtramp(void (*handler)(void*), void *cntx);
 
 
 

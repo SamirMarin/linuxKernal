@@ -56,7 +56,7 @@ int send(int dest_pid, unsigned long num, struct pcb * currentProcess) {
 
     } else {
         // put the currentprocess on the sender's queue of the process we found
-
+        currentProcess->state = STATE_SEND;
         ready(currentProcess, &(foundProcess->sendQHead), &(foundProcess->sendQTail));
     }
     return 0;
@@ -97,6 +97,7 @@ int recv(unsigned int *from_pid, unsigned long *num, struct pcb * currentProcess
             ready(currentProcess, &readyQueueHead, &readyQueueTail);
             ready(foundProcess, &readyQueueHead, &readyQueueTail);
         } else {
+            currentProcess->state = STATE_RECV;
             ready(currentProcess, &(foundProcess->recvQHead), &(foundProcess->recvQTail));
         }
     } else {
@@ -104,6 +105,7 @@ int recv(unsigned int *from_pid, unsigned long *num, struct pcb * currentProcess
         // check the sender's queue of the current Process and take the first thing from there
         struct pcb *foundProcess = next(&(currentProcess->sendQHead), &(currentProcess->sendQTail));
         if (!foundProcess) {
+            currentProcess->state = STATE_RECV;
             ready(currentProcess, &recvAnyQueueHead, &recvAnyQueueTail);
             return 0;
         }

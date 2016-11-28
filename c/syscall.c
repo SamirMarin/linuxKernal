@@ -9,6 +9,8 @@
 
 int syscall(int call);
 int syscall2(int call, ...);
+int syscall3(int call, ... );
+int syscall4(int call, ... );
 void sysyield( void );
 unsigned int syscreate( void (*func)(void), int stack);
 void sysstop( void );
@@ -18,6 +20,8 @@ int syskill(int pid, int signalNumber);
 int syssend(int dest_pid, unsigned long num);
 int sysrecv(unsigned int *from_pid, unsigned long *num);
 int syssleep( unsigned int milliseconds );
+int syssighandler(int signal, void(*newHandler)(void*), void(**oldHandler)(void*));
+int syssigreturn(void *old_sp);
 
 /* 
  * ===  FUNCTION  ======================================================================
@@ -77,6 +81,31 @@ int syscall3(int call, ... ){
             "popl %%eax"
             : "=r"(result)
             : 
+            :"%eax"
+            );
+    return result;
+}
+
+/*
+ * ===  FUNCTION  ======================================================================
+ *         Name:  syscall4
+ *  Description:  pushes four arguments on to stack
+ * =====================================================================================
+ */
+int syscall4(int call, ... ){
+    int result = 0;
+    __asm__ __volatile__(
+            "pushl 20(%%ebp)\n\t"
+            "pushl 16(%%ebp)\n\t"
+            "pushl 12(%%ebp)\n\t"
+            "pushl 8(%%ebp)\n\t"
+            "int $67\n\t"
+            "movl %%eax, %0\n\t"
+            "popl %%eax\n\t"
+            "popl %%eax\n\t"
+            "popl %%eax"
+            : "=r"(result)
+            :
             :"%eax"
             );
     return result;
@@ -143,4 +172,17 @@ int sysgetcputimes(struct processStatuses *ps) {
         return -2;
     }
     return syscall2(CPU_TIMES, ps);
+}
+
+int syssighandler(int signal, void(*newHandler)(void *), void(**oldHandler)(void*)) {
+        return syscall4(SIG_HANDLER, signal, newHandler, oldHandler);
+
+}
+
+int syssigreturn(void *old_sp) {
+    return syscall2(SIG_RETURN,  old_sp);
+}
+
+int syswait(int pid) {
+    return syscall2(WAIT, pid);
 }

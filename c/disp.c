@@ -15,9 +15,10 @@ struct pcb *idleProcessHead;
 struct pcb *idleProcessTail;
 
 
+#define MAGIC_NUMBER 9999
 
-
-
+extern long freemem; /* set in i386.c */
+extern char * maxaddr;
 
 void dispatch(void);
 void cleanup(struct pcb *process);
@@ -25,10 +26,12 @@ struct pcb* next(struct pcb **head, struct pcb **tail);
 int ready(struct pcb *process, struct pcb **head, struct pcb **tail);
 int killProcess(int pid, int currentPid);
 void removeNthPCB(struct pcb *process);
-void clearWaitingProcesses(struct pcb **head, struct pcb **tail);
+void clearWaitingProcesses(struct pcb **head, struct pcb **tail, int retCode);
 void testCleanup(void);
-void setupSignalStack(struct pcb *process);
+void setupSignal(struct pcb *process);
 void setProcessState(struct pcb *p, struct pcb **head, struct pcb **tail);
+int registerHandler(int signal, void(*newHandler)(void *), void(**oldHandler)(void*), struct pcb *pcb);
+void wait(int pid, struct pcb *p);
 struct pcb* runIdleIfReadyEmpty(struct pcb **head);
 
 /* 
@@ -42,7 +45,7 @@ void dispatch(void) {
     struct pcb *process = next(&readyQueueHead, &readyQueueTail);
 
     while (1) {
-        setupSignalStack(process);
+        setupSignal(process);
         int request = contextswitch(process);
 
         switch( request ) {
@@ -93,6 +96,7 @@ void dispatch(void) {
                     // Old kill code, need to change after A3 is completed
                     //process->rc = killProcess(pid, process->pid);
                     process->rc = signal(pid, sig_no);
+                    process = next(&readyQueueHead, &readyQueueTail);
                     break;
                 }
             case(SEND):
@@ -120,6 +124,33 @@ void dispatch(void) {
                     process = next(&readyQueueHead, &readyQueueTail);
                     break;
                 }
+            case(SIG_HANDLER):
+                {
+                    int sig_no = (int) *(process->args + 1);
+                    void (*handler)(void*) = (void (*)(void*)) *(process->args + 2);
+                    void (**oldHandler)(void*) = (void (**)(void*)) *(process->args + 3);
+                    process->rc = registerHandler(sig_no, handler, oldHandler, process);
+                    ready(process, &readyQueueHead, &readyQueueTail);
+                    process = next(&readyQueueHead, &readyQueueTail);
+                    break;
+                }
+            case(SIG_RETURN):
+                {
+                    unsigned long *oldSP = (unsigned long *) *(process->args + 1);
+                    int retCode = (int) *(oldSP - 1);
+                    if (retCode != -500) {
+                        process->rc = retCode;
+                    }
+                    process->sp = (unsigned long) oldSP;
+                    break;
+                }
+            case(WAIT):
+                {
+                    int pid = (int) *(process->args + 1);
+                    wait(pid, process);
+                    process = next(&readyQueueHead, &readyQueueTail);
+                    break;
+                }
             default:    
                 {
                     kprintf("ERROR, request is: %d function: dispatch, file: disp.c", request);
@@ -137,29 +168,31 @@ void dispatch(void) {
 void cleanup(struct pcb *process) {
     //testCleanup();
     process->pid = -1;
+    process->state = STATE_STOPPED;
     kfree(process->memoryStart);
-    clearWaitingProcesses(&(process->sendQHead), &(process->sendQTail));
-    clearWaitingProcesses(&(process->recvQHead), &(process->recvQTail));
-    process->sendQHead = NULL;
-    process->sendQTail = NULL;
-    process->recvQHead = NULL;
-    process->recvQTail = NULL;
+    clearWaitingProcesses(&(process->sendQHead), &(process->sendQTail), -1);
+    clearWaitingProcesses(&(process->recvQHead), &(process->recvQTail), -1);
+    clearWaitingProcesses(&(process->waitQHead), &(process->waitQTail), 0);
     ready(process, &stopQueueHead, &stopQueueTail);
     //testCleanup();
 }
+
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:  clearWaitingProcesses
- *  Description:  removes process from the given head or tail and puts it on the ready queue
+ *  Description:  removes process from the given head and tail and puts it on the ready queue with a return code that was passed in as retCode
  * =====================================================================================
  */
-void clearWaitingProcesses(struct pcb **head, struct pcb **tail) {
+void clearWaitingProcesses(struct pcb **head, struct pcb **tail, int retCode) {
     while (*head && *tail) {
         struct pcb *process = next(head, tail);
-        process->rc = -1;
+        process->rc = retCode;
         ready(process, &readyQueueHead, &readyQueueTail);
     }
+    *head = NULL;
+    *tail = NULL;
 }
+
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:  killProcess
@@ -181,6 +214,24 @@ int killProcess(int pid, int currentPid){
     return 0;
 }
 
+
+void wait(int pid, struct pcb *p) {
+    if (pid < 0) {
+        p->rc = -1;
+        ready(p, &readyQueueHead, &readyQueueTail);
+    }
+    int index = (pid % PCBTABLESIZE) - 1;
+    struct pcb* process = pcbTable + index;
+    if (index < 0 || process->pid != pid) {
+        p->rc = -1;
+        ready(p, &readyQueueHead, &readyQueueTail);
+    }
+    p->state = STATE_WAITING;
+    ready(p, &(process->waitQHead), &(process->waitQTail));
+
+
+}
+
 // This function is the system side of the sysgetcputimes call.
 // It places into a the structure being pointed to information about
 // each currently active process.
@@ -189,7 +240,6 @@ int killProcess(int pid, int currentPid){
 //        filled with information about all the processes currently in the system
 //
 
-extern char * maxaddr;
   
 int getCPUtimes(struct pcb *p, struct processStatuses *ps) {
   
@@ -224,25 +274,88 @@ int getCPUtimes(struct pcb *p, struct processStatuses *ps) {
 }
 
 
+int registerHandler(int signal, void(*newHandler)(void *), void(**oldHandler)(void*), struct pcb *p) {
+    if (signal < 0 || signal > SIGNALMAX) {
+        return -1;
+    }
 
-void setupSignalStack(struct pcb* process) {
+    if (((char *) newHandler) > maxaddr) {
+        return -2;
+    }
+    if (((unsigned long) newHandler) > HOLESTART && ((unsigned long) newHandler) < HOLEEND) {
+        return -2;
+    }
+
+    *oldHandler = p->sigFunctions[signal];
+    p->sigFunctions[signal] = newHandler;
+
+    return 0;
+}
+
+void setupSignal(struct pcb* process) {
+    if (!process->signalBitMask) {
+            return;
+    }
+
+    unsigned long sigBM = process->signalBitMask;
+    int signalNo = 0;
+    // Determine largest signal number to process
+    while (sigBM >>= 1) {
+        signalNo++;
+    }
+
+
+    void (*handler)(void*) = process->sigFunctions[signalNo];
+    // Handler is null, so we ignore signal
+    if (!handler) {
+        // Set the bit in the signal to be zero
+        unsigned long newSignalBitMask = process->signalBitMask;
+        process->signalBitMask = newSignalBitMask & ~(1 << signalNo);
+        return;
+    }
+
+    // PREPARE ARGUMENTS FOR SIGTRAMP
+    unsigned long * sp = (unsigned long *) process->sp;
+    sp -= 2;
+    *sp = process->sp; // old context
+    sp--;
+    *sp = (unsigned long) handler; //handler function
+    sp--;
+    // Instead of return address (for testing)
+    *sp = MAGIC_NUMBER;
+
+
+    // SETUP NEW CONTEXT
+    struct CPU* context = (struct CPU*) sp;
+
+    // Move pointer down so that we can fit the CPU State
+    context--;
+
     unsigned long * oldSP = (unsigned long *) process->sp;
-    unsigned long * oldcntx = oldSP;
-    oldSP = oldSP - 1;
-    *oldSP = (unsigned long) oldSP;
-    oldSP = oldSP - 1;
-    *oldSP = (unsigned long) oldcntx;
+    context->edi = *oldSP--;
+    context->esi = *oldSP--;
+    context->ebp = *oldSP--;
+    context->esp = *oldSP--;
+    context->ebx = *oldSP--;
+    context->edx = *oldSP--;
+    context->ecx = *oldSP--;
+    context->eax = *oldSP--;
+    context->iret_eip = (unsigned long) &sigtramp;
+    // skip Old_eip
+    oldSP--;
+    context->iret_cs = *oldSP--;
+    context->eflags = *oldSP;
 
-    // Need to replace with the function for the signal handler
-    //*(oldSP - 3) = cntx;
 
-    struct CPU* context = (struct CPU*) oldSP;
-
-    // Move context down by the size of the CPU struct;
-    context = context - 1;
+    // Set up process stack pointer to look like it begins where the new context is;
+    process->sp = (unsigned long) context;
 
 
+    // Set the bit in the signal as delivered
+    unsigned long newSignalBitMask = process->signalBitMask;
+    process->signalBitMask = newSignalBitMask & ~(1 << signalNo);
 
+    return;
 
 }
 
@@ -365,15 +478,13 @@ struct pcb* runIdleIfReadyEmpty(struct pcb **head){
 }
 
 void setProcessState(struct pcb *p, struct pcb **head, struct pcb **tail) {
-    if (head == readyQueueHead && tail == readyQueueTail) {
+    if (head == &readyQueueHead && tail == &readyQueueTail) {
         p->state = STATE_READY;
-    } else if (head == stopQueueHead && tail == stopQueueTail) {
-        p->state = STATE_STOPPED;
-    } else if (head == sleepQueueHead && tail == sleepQueueTail) {
-        p->state = STATE_SLEEP;
-    } else {
-        p->state = STATE_BLOCKED;
     }
+    if (head == &stopQueueHead && tail == &stopQueueTail) {
+        p->state = STATE_STOPPED;
+    } 
+    return;
 }
 
 
