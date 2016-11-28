@@ -77,7 +77,7 @@ extern struct pcb *idleProcessTail; //points to idle process
 extern struct pcb *sleepQueueHead; //points to idle process
 extern struct pcb *sleepQueueTail; //points to idle process
 extern struct pcb* next(struct pcb **head, struct pcb **tail);
-extern int ready(struct pcb *process, struct pcb **head, struct pcb **tail);
+extern int ready(struct pcb *process, struct pcb **head, struct pcb **tail, int state);
 extern void removeNthPCB(struct pcb *process);
 
 //stores cpu context

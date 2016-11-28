@@ -10,7 +10,7 @@ int signal(int pid, int sig_no);
 void sigtramp(void (*handler)(void*), void *cntx);
 
 int signal(int pid, int sig_no) {
-    int index = (pid % PCBTABLESIZE) - 1;
+    int index = (pid % PCBTABLESIZE);
     struct pcb* process = pcbTable + index;
     if (index < 0 || process->pid != pid || pid < 0) {
         return -1;
@@ -22,18 +22,17 @@ int signal(int pid, int sig_no) {
     sp--;
     int state = process->state;
     if (state == STATE_WAITING) {
-        removeNthPCB(process);
         *sp = -2;
     } else if (state == STATE_RECV || state == STATE_SEND || state == STATE_SLEEP) {
-        removeNthPCB(process);
         *sp = -362;
     } else {
-        *sp = -500;
+        *sp = process->rc;
     }
     unsigned long originalMask = process->signalBitMask;
     unsigned long one = 1;
     process->signalBitMask = originalMask | (one << sig_no);
-    ready(process, &readyQueueHead, &readyQueueTail);
+    removeNthPCB(process);
+    ready(process, &readyQueueHead, &readyQueueTail, STATE_READY);
     return 0;
 }
 

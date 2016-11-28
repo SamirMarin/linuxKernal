@@ -105,7 +105,7 @@ void initProcessTable( void ){
         pcbTableHead[i].reuseCount = -1;
         pcbTableHead[i].head = &stopQueueHead;
         pcbTableHead[i].tail = &stopQueueTail;
-        ready(pcbTableHead+i, &stopQueueHead, &stopQueueTail);
+        ready(pcbTableHead+i, &stopQueueHead, &stopQueueTail, STATE_READY);
     }
     //struct pcb *pcbTableHeadTest = pcbTable;
     /* test to make sure that stopped queue is set up with 32 pcbs

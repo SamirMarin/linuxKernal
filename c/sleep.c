@@ -20,7 +20,7 @@ void tick(void);
 unsigned int sleep(unsigned int ms, struct pcb * process){
     if(!ms){
         process->rc = 0;
-        ready(process, &readyQueueHead, &readyQueueTail);
+        ready(process, &readyQueueHead, &readyQueueTail, STATE_READY);
         return 0;
     }
     unsigned int tick = ms/TICKLENGTH + (ms%TICKLENGTH ? 1 : 0);
@@ -42,7 +42,7 @@ void tick(void){
     while (sleepQueueHead && sleepQueueHead->tick <= 0) {
         struct pcb *process = next(&sleepQueueHead, &sleepQueueTail);
         process->rc = 0;
-        ready(process, &readyQueueHead, &readyQueueTail);
+        ready(process, &readyQueueHead, &readyQueueTail, STATE_READY);
     }
 }
 

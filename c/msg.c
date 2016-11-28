@@ -18,20 +18,20 @@ int recv(unsigned int *from_pid, unsigned long *num, struct pcb * currentProcess
  */
 int send(int dest_pid, unsigned long num, struct pcb * currentProcess) {
     if (dest_pid < 1) {
-        ready(currentProcess, &readyQueueHead, &readyQueueTail);
+        ready(currentProcess, &readyQueueHead, &readyQueueTail, STATE_READY);
         return -1;
     }
 
-    int index = (dest_pid % PCBTABLESIZE) - 1;
+    int index = (dest_pid % PCBTABLESIZE);
     struct pcb* foundProcess = pcbTable + index;
 
     if (index < 0 || foundProcess->pid != dest_pid) {
-        ready(currentProcess, &readyQueueHead, &readyQueueTail);
+        ready(currentProcess, &readyQueueHead, &readyQueueTail, STATE_READY);
         return -1;
     }
 
     if (dest_pid == currentProcess->pid) {
-        ready(currentProcess, &readyQueueHead, &readyQueueTail);
+        ready(currentProcess, &readyQueueHead, &readyQueueTail, STATE_READY);
         return -2;
     }
 
@@ -42,7 +42,7 @@ int send(int dest_pid, unsigned long num, struct pcb * currentProcess) {
         unsigned int * from_pid = (unsigned int *) *(foundProcess->args + 1);
         unsigned long * dest_num = (unsigned long *) *(foundProcess->args + 2);
         if ((*from_pid != currentProcess->pid) && *from_pid) {
-            ready(currentProcess, &readyQueueHead, &readyQueueTail);
+            ready(currentProcess, &readyQueueHead, &readyQueueTail, STATE_READY);
             return -3;
         }
 
@@ -51,13 +51,12 @@ int send(int dest_pid, unsigned long num, struct pcb * currentProcess) {
         // remove foundProcess from the queue it was in
         removeNthPCB(foundProcess);
         // put both processes on the ready queue
-        ready(currentProcess, &readyQueueHead, &readyQueueTail);
-        ready(foundProcess, &readyQueueHead, &readyQueueTail);
+        ready(currentProcess, &readyQueueHead, &readyQueueTail, STATE_READY);
+        ready(foundProcess, &readyQueueHead, &readyQueueTail, STATE_READY);
 
     } else {
         // put the currentprocess on the sender's queue of the process we found
-        currentProcess->state = STATE_SEND;
-        ready(currentProcess, &(foundProcess->sendQHead), &(foundProcess->sendQTail));
+        ready(currentProcess, &(foundProcess->sendQHead), &(foundProcess->sendQTail), STATE_SEND);
     }
     return 0;
 }
@@ -72,14 +71,14 @@ int send(int dest_pid, unsigned long num, struct pcb * currentProcess) {
 int recv(unsigned int *from_pid, unsigned long *num, struct pcb * currentProcess) {
     // Non-zero PID
     if (*from_pid) {
-        int index = (*from_pid % PCBTABLESIZE) - 1;
+        int index = (*from_pid % PCBTABLESIZE);
         struct pcb* foundProcess = pcbTable + index;
         if (index < 0 || foundProcess->pid != *from_pid) {
-            ready(currentProcess, &readyQueueHead, &readyQueueTail);
+            ready(currentProcess, &readyQueueHead, &readyQueueTail, STATE_READY);
             return -1;
         }
         if (*from_pid == currentProcess->pid) {
-            ready(currentProcess, &readyQueueHead, &readyQueueTail);
+            ready(currentProcess, &readyQueueHead, &readyQueueTail, STATE_READY);
             return -2;
         } 
 
@@ -88,25 +87,23 @@ int recv(unsigned int *from_pid, unsigned long *num, struct pcb * currentProcess
             int dest_pid = (int) *(foundProcess->args + 1);
             unsigned long from_num = (unsigned long) *(foundProcess->args + 2);
             if (dest_pid != currentProcess->pid) {
-                ready(currentProcess, &readyQueueHead, &readyQueueTail);
+                ready(currentProcess, &readyQueueHead, &readyQueueTail, STATE_READY);
                 return -3;
             }
 
             *num = from_num;
             removeNthPCB(foundProcess);
-            ready(currentProcess, &readyQueueHead, &readyQueueTail);
-            ready(foundProcess, &readyQueueHead, &readyQueueTail);
+            ready(currentProcess, &readyQueueHead, &readyQueueTail, STATE_READY);
+            ready(foundProcess, &readyQueueHead, &readyQueueTail, STATE_READY);
         } else {
-            currentProcess->state = STATE_RECV;
-            ready(currentProcess, &(foundProcess->recvQHead), &(foundProcess->recvQTail));
+            ready(currentProcess, &(foundProcess->recvQHead), &(foundProcess->recvQTail), STATE_RECV);
         }
     } else {
         // from_pid is zero.
         // check the sender's queue of the current Process and take the first thing from there
         struct pcb *foundProcess = next(&(currentProcess->sendQHead), &(currentProcess->sendQTail));
         if (!foundProcess) {
-            currentProcess->state = STATE_RECV;
-            ready(currentProcess, &recvAnyQueueHead, &recvAnyQueueTail);
+            ready(currentProcess, &recvAnyQueueHead, &recvAnyQueueTail, STATE_RECV);
             return 0;
         }
 
@@ -118,8 +115,8 @@ int recv(unsigned int *from_pid, unsigned long *num, struct pcb * currentProcess
         }
         *num = from_num;
         *from_pid = foundProcess->pid; 
-        ready(currentProcess, &readyQueueHead, &readyQueueTail);
-        ready(foundProcess, &readyQueueHead, &readyQueueTail);
+        ready(currentProcess, &readyQueueHead, &readyQueueTail, STATE_READY);
+        ready(foundProcess, &readyQueueHead, &readyQueueTail, STATE_READY);
 
     }
     return 0;

@@ -29,7 +29,7 @@ int create(void (*func)(void), int stackSize) {
         return 0;
     }
     process->pid = nextPid(process->reuseCount, process->index);
-    ready(process, &readyQueueHead, &readyQueueTail);
+    ready(process, &readyQueueHead, &readyQueueTail, STATE_READY);
     return process->pid;
 }
 
@@ -48,7 +48,7 @@ int createIdle(void (*func)(void), int stackSize) {
         return -1;
     }
     process->pid = 0;
-    ready(process, &idleProcessHead, &idleProcessTail);
+    ready(process, &idleProcessHead, &idleProcessTail, STATE_READY);
     return 0;
 }
 

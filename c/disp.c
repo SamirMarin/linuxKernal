@@ -23,13 +23,12 @@ extern char * maxaddr;
 void dispatch(void);
 void cleanup(struct pcb *process);
 struct pcb* next(struct pcb **head, struct pcb **tail);
-int ready(struct pcb *process, struct pcb **head, struct pcb **tail);
+int ready(struct pcb *process, struct pcb **head, struct pcb **tail, int state);
 int killProcess(int pid, int currentPid);
 void removeNthPCB(struct pcb *process);
 void clearWaitingProcesses(struct pcb **head, struct pcb **tail, int retCode);
 void testCleanup(void);
 void setupSignal(struct pcb *process);
-void setProcessState(struct pcb *p, struct pcb **head, struct pcb **tail);
 int registerHandler(int signal, void(*newHandler)(void *), void(**oldHandler)(void*), struct pcb *pcb);
 void wait(int pid, struct pcb *p);
 struct pcb* runIdleIfReadyEmpty(struct pcb **head);
@@ -62,14 +61,14 @@ void dispatch(void) {
                 {
                     tick();
                     process->cpuTime++;
-                    ready(process, &readyQueueHead, &readyQueueTail);
+                    ready(process, &readyQueueHead, &readyQueueTail, STATE_READY);
                     process = next(&readyQueueHead, &readyQueueTail);
                     end_of_intr();
                     break;
                 }
             case(YIELD): 
                 {
-                    ready(process, &readyQueueHead, &readyQueueTail);
+                    ready(process, &readyQueueHead, &readyQueueTail, STATE_READY);
                     process = next(&readyQueueHead, &readyQueueTail);
                     break;
                 }
@@ -131,7 +130,7 @@ void dispatch(void) {
                     void (*handler)(void*) = (void (*)(void*)) *(process->args + 2);
                     void (**oldHandler)(void*) = (void (**)(void*)) *(process->args + 3);
                     process->rc = registerHandler(sig_no, handler, oldHandler, process);
-                    ready(process, &readyQueueHead, &readyQueueTail);
+                    ready(process, &readyQueueHead, &readyQueueTail, STATE_READY);
                     process = next(&readyQueueHead, &readyQueueTail);
                     break;
                 }
@@ -139,9 +138,7 @@ void dispatch(void) {
                 {
                     unsigned long *oldSP = (unsigned long *) *(process->args + 1);
                     int retCode = (int) *(oldSP - 1);
-                    if (retCode != -500) {
-                        process->rc = retCode;
-                    }
+                    process->rc = retCode;
                     process->sp = (unsigned long) oldSP;
                     break;
                 }
@@ -180,7 +177,7 @@ void cleanup(struct pcb *process) {
     clearWaitingProcesses(&(process->sendQHead), &(process->sendQTail), -1);
     clearWaitingProcesses(&(process->recvQHead), &(process->recvQTail), -1);
     clearWaitingProcesses(&(process->waitQHead), &(process->waitQTail), 0);
-    ready(process, &stopQueueHead, &stopQueueTail);
+    ready(process, &stopQueueHead, &stopQueueTail, STATE_STOPPED);
     //testCleanup();
 }
 
@@ -194,7 +191,7 @@ void clearWaitingProcesses(struct pcb **head, struct pcb **tail, int retCode) {
     while (*head && *tail) {
         struct pcb *process = next(head, tail);
         process->rc = retCode;
-        ready(process, &readyQueueHead, &readyQueueTail);
+        ready(process, &readyQueueHead, &readyQueueTail, STATE_READY);
     }
     *head = NULL;
     *tail = NULL;
@@ -208,7 +205,7 @@ void clearWaitingProcesses(struct pcb **head, struct pcb **tail, int retCode) {
  * =====================================================================================
  */
 int killProcess(int pid, int currentPid){
-    int index = (pid % PCBTABLESIZE) - 1;
+    int index = (pid % PCBTABLESIZE);
     struct pcb* process = pcbTable + index;
     if (index < 0 || process->pid != pid) {
         return -1;
@@ -225,16 +222,16 @@ int killProcess(int pid, int currentPid){
 void wait(int pid, struct pcb *p) {
     if (pid < 0) {
         p->rc = -1;
-        ready(p, &readyQueueHead, &readyQueueTail);
+        ready(p, &readyQueueHead, &readyQueueTail, STATE_READY);
     }
-    int index = (pid % PCBTABLESIZE) - 1;
+    int index = (pid % PCBTABLESIZE);
     struct pcb* process = pcbTable + index;
     if (index < 0 || process->pid != pid) {
         p->rc = -1;
-        ready(p, &readyQueueHead, &readyQueueTail);
+        ready(p, &readyQueueHead, &readyQueueTail, STATE_READY);
     }
     p->state = STATE_WAITING;
-    ready(p, &(process->waitQHead), &(process->waitQTail));
+    ready(p, &(process->waitQHead), &(process->waitQTail), STATE_WAITING);
 
 
 }
@@ -413,7 +410,7 @@ void removeNthPCB(struct pcb *process){
  *       Return:  1 if sucessful 0 if unsucessful
  * =====================================================================================
  */
-int ready(struct pcb *process, struct pcb **head, struct pcb **tail){
+int ready(struct pcb *process, struct pcb **head, struct pcb **tail, int state){
     if(!process){
         return -1;
     }
@@ -427,7 +424,7 @@ int ready(struct pcb *process, struct pcb **head, struct pcb **tail){
         process->next = NULL;
         process->head = head;
         process->tail = tail;
-        setProcessState(process, head, tail);
+        process->state = state;
         return 1;
     }
     if(*head && *tail){
@@ -437,7 +434,7 @@ int ready(struct pcb *process, struct pcb **head, struct pcb **tail){
         process->head = head;
         process->tail = tail;
         (*tail)->next = NULL;
-        setProcessState(process, head, tail);
+        process->state = state;
         return 1;
     }
     kprintf("\n\n one of readyQueueHead or readyQueueTail is NULL\n file: disp.c\n function: ready");
@@ -483,17 +480,6 @@ struct pcb* runIdleIfReadyEmpty(struct pcb **head){
     }
     return NULL;
 }
-
-void setProcessState(struct pcb *p, struct pcb **head, struct pcb **tail) {
-    if (head == &readyQueueHead && tail == &readyQueueTail) {
-        p->state = STATE_READY;
-    }
-    if (head == &stopQueueHead && tail == &stopQueueTail) {
-        p->state = STATE_STOPPED;
-    } 
-    return;
-}
-
 
 //Test function for cleanup
 void testCleanup(void){
