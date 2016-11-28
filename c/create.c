@@ -83,6 +83,7 @@ struct pcb * setup_pcb(void (*func)(void), int stackSize) {
     unsigned long cpuStatePointer = (unsigned long) (bottomStack - sizeof(struct CPU) - safetyMargin);
     unsigned long *return_address = (unsigned long*) (bottomStack - safetyMargin);
     // Setup default signal to be ignore for each function
+    int i;
     for (i = 0; i < SIGNALMAX; i++) {
             newPcb->sigFunctions[i] = NULL;
     }
