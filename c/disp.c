@@ -33,6 +33,7 @@ void setProcessState(struct pcb *p, struct pcb **head, struct pcb **tail);
 int registerHandler(int signal, void(*newHandler)(void *), void(**oldHandler)(void*), struct pcb *pcb);
 void wait(int pid, struct pcb *p);
 struct pcb* runIdleIfReadyEmpty(struct pcb **head);
+int getCPUtimes(struct pcb *p, struct processStatuses *ps);
 
 /* 
  * ===  FUNCTION  ======================================================================
@@ -149,6 +150,12 @@ void dispatch(void) {
                     int pid = (int) *(process->args + 1);
                     wait(pid, process);
                     process = next(&readyQueueHead, &readyQueueTail);
+                    break;
+                }
+            case(CPU_TIMES):
+                {
+                    struct processStatuses *ps = (struct processStatuses*) *(process->args + 1);
+                    process->rc = getCPUtimes(process, ps);
                     break;
                 }
             default:    
