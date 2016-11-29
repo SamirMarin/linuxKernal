@@ -96,6 +96,7 @@ void dispatch(void) {
                     // Old kill code, need to change after A3 is completed
                     //process->rc = killProcess(pid, process->pid);
                     process->rc = signal(pid, sig_no);
+                    ready(process, &readyQueueHead, &readyQueueTail, STATE_READY);
                     process = next(&readyQueueHead, &readyQueueTail);
                     break;
                 }
@@ -282,7 +283,6 @@ int registerHandler(int signal, void(*newHandler)(void *), void(**oldHandler)(vo
     if (signal < 0 || signal > SIGNALMAX) {
         return -1;
     }
-
     if (((char *) newHandler) > maxaddr) {
         return -2;
     }
@@ -290,7 +290,9 @@ int registerHandler(int signal, void(*newHandler)(void *), void(**oldHandler)(vo
         return -2;
     }
 
-    *oldHandler = p->sigFunctions[signal];
+    if (oldHandler) {
+        *oldHandler = p->sigFunctions[signal];
+    }
     p->sigFunctions[signal] = newHandler;
 
     return 0;
@@ -300,14 +302,12 @@ void setupSignal(struct pcb* process) {
     if (!process->signalBitMask) {
             return;
     }
-
     unsigned long sigBM = process->signalBitMask;
     int signalNo = 0;
     // Determine largest signal number to process
     while (sigBM >>= 1) {
         signalNo++;
     }
-
 
     void (*handler)(void*) = process->sigFunctions[signalNo];
     // Handler is null, so we ignore signal
@@ -338,25 +338,20 @@ void setupSignal(struct pcb* process) {
     // Move pointer down so that we can fit the CPU State
     context--;
 
-    unsigned long * oldSP = (unsigned long *) process->sp;
-    context->edi = *oldSP--;
-    context->esi = *oldSP--;
-    context->ebp = *oldSP--;
-    context->esp = *oldSP--;
-    context->ebx = *oldSP--;
-    context->edx = *oldSP--;
-    context->ecx = *oldSP--;
-    context->eax = *oldSP--;
-    context->iret_eip = (unsigned long) &sigtramp;
-    // skip Old_eip
-    oldSP--;
-    context->iret_cs = *oldSP--;
-    context->eflags = *oldSP;
-
+    context->edi = 0;
+    context->esi = 0;
+    context->ebp = 0;
+    context->esp = 0;
+    context->ebx = 0;
+    context->edx = 0;
+    context->ecx = 0;
+    context->eax = 0;
+    context->iret_eip = (unsigned long) (&sigtramp);
+    context->iret_cs = getCS();
+    context->eflags = 0x3200;
 
     // Set up process stack pointer to look like it begins where the new context is;
     process->sp = (unsigned long) context;
-
 
     // Set the bit in the signal as delivered
     unsigned long one = 1;
