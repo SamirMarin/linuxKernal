@@ -313,14 +313,17 @@ void setupSignal(struct pcb* process) {
     // Handler is null, so we ignore signal
     if (!handler) {
         // Set the bit in the signal to be zero
+        unsigned long one = 1;
         unsigned long newSignalBitMask = process->signalBitMask;
-        process->signalBitMask = newSignalBitMask & ~(1 << signalNo);
+        process->signalBitMask = newSignalBitMask & ~(one << signalNo);
         return;
     }
 
     // PREPARE ARGUMENTS FOR SIGTRAMP
     unsigned long * sp = (unsigned long *) process->sp;
-    sp -= 2;
+    sp--;
+    *sp = process->rc;
+    sp--;
     *sp = process->sp; // old context
     sp--;
     *sp = (unsigned long) handler; //handler function
@@ -356,11 +359,11 @@ void setupSignal(struct pcb* process) {
 
 
     // Set the bit in the signal as delivered
+    unsigned long one = 1;
     unsigned long newSignalBitMask = process->signalBitMask;
-    process->signalBitMask = newSignalBitMask & ~(1 << signalNo);
+    process->signalBitMask = newSignalBitMask & ~(one << signalNo);
 
     return;
-
 }
 
 /* 

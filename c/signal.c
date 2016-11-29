@@ -18,15 +18,13 @@ int signal(int pid, int sig_no) {
     if (sig_no < 0 || sig_no > SIGNALMAX) {
         return -2;
     }
-    unsigned long * sp = (unsigned long*) process->sp;
-    sp--;
+
     int state = process->state;
     if (state == STATE_WAITING) {
-        *sp = -2;
-    } else if (state == STATE_RECV || state == STATE_SEND || state == STATE_SLEEP) {
-        *sp = -362;
-    } else {
-        *sp = process->rc;
+        process->rc = -2;
+    }
+    if (state == STATE_RECV || state == STATE_SEND || state == STATE_SLEEP) {
+        process->rc  = -362;
     }
     unsigned long originalMask = process->signalBitMask;
     unsigned long one = 1;
