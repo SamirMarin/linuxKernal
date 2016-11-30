@@ -45,6 +45,7 @@ void           set_evec(unsigned int xnum, unsigned long handler);
 // Global Constants 
 #define PCBTABLESIZE 32
 #define SIGNALMAX 31
+#define DEVICETABLESIZE 2
 //constants to track state that a process is in
 #define STATE_STOPPED 0
 #define STATE_READY 1
@@ -60,6 +61,7 @@ void           set_evec(unsigned int xnum, unsigned long handler);
 
 // init.c functions
 extern struct pcb *pcbTable;
+extern struct devsw *deviceTable;
 // mem.c functions
 extern void kmeminit(void);
 extern void *kmalloc(int size);
@@ -120,7 +122,11 @@ struct pcb {
     struct pcb *recvQTail;
     struct pcb *waitQHead;// pointer to the list of pcb's that are waiting for this process to die
     struct pcb *waitQTail;
-
+    struct FD *FDT; //pointer to the FDT for this process always size four initiated with sysopen
+    struct FD *FDTFreeHead;// pointer to head of the entries in FDT table for process currently free for a device to use
+    struct FD *FDTFreeTail;// pointer to tail of the entries in FDT table for process currently free for a device to use
+    struct FD *FDTBusyHead;// pointer to head of the entries in FDT table for process currently in use by device
+    struct FD *FDTBusyTail;// pointer to tail of the entries in FDT table for process currently in use by device
 };
 
 // enum representing type of system calls available
@@ -138,13 +144,49 @@ enum SystemEvents {
     CPU_TIMES,
     SIG_HANDLER,
     SIG_RETURN,
-    WAIT
+    WAIT,
+    OPEN,
+    CLOSE,
+    WRITE,
+    READ,
+    IOCTL
 };
 
 struct processStatuses {
   int  pid[PCBTABLESIZE];      // The process ID
   int  status[PCBTABLESIZE];   // The process status
   long  cpuTime[PCBTABLESIZE]; // CPU time used in milliseconds
+};
+
+struct FD{
+    int index;
+    int majorNum;
+    struct devsw *dvBlock;
+    int status;
+    char *name;
+    struct FD *prev;
+    struct FD *next;
+}; 
+
+struct devsw{
+    int dvnum;
+    char *dvname;
+    int (*dvinit)();
+    int (*dvopen)();
+    int (*dvclose)();
+    int (*dvread)();
+    int (*dvwrite)();
+    int (*dvseek)();
+    int (*dvgetc)();
+    int (*dvputc)();
+    int (*dvcntl)();
+    int *dvcsr;
+    int *dvivec;
+    int *dvovec;
+    int (*dviint)();
+    int (*dvoint)();
+    int *dvioblk;
+    int dvminor;
 };
 
 // ctsw.c functions

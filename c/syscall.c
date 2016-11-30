@@ -186,3 +186,27 @@ int syssigreturn(void *old_sp) {
 int syswait(int pid) {
     return syscall2(WAIT, pid);
 }
+
+int sysopen(int device_no){
+    return syscall2(OPEN, device_no);
+}
+
+int sysclose(int fd){
+    return syscall2(CLOSE, fd);
+}
+
+int syswrite(int fd, void *buff, int bufflen){
+    return syscall4(WRITE, fd, buff, bufflen);
+}
+
+int sysread(int fd, void *buff, int bufflen){
+    return syscall4(READ, fd, buff, bufflen);
+}
+
+int sysioctl(int fd, unsigned long command, ...){
+    //we will perhpas need to have different if statment depedingo in number of parameters we
+    //will support for this call or go back to having a syscall for this syscall that uses valist
+    //for now I will just include call that in uses syscall3 for call with the fd and the command which is the minimum
+    //used for this syscall
+    return syscall3(IOCTL, fd, command);
+}

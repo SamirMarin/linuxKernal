@@ -10,9 +10,11 @@ extern  long	freemem; 	/* start of free memory (set in i386.c) */
 extern char	*maxaddr;	/* max memory address (set in i386.c)	*/
 
 struct pcb *pcbTable;
+struct devsw *deviceTable;
 
 void initProcessTable( void );
 static void idleproc( void );
+void initDeviceTable( void );
 
 /************************************************************************/
 /***				NOTE:				      ***/
@@ -72,6 +74,11 @@ void initproc( void )				/* The beginning */
         for(;;);
     }
     initProcessTable();
+    deviceTable = (struct devsw*) kmalloc(DEVICETABLESIZE*sizeof(struct devsw));
+    if(!deviceTable) {
+        kprintf("\n\nCould not allocate memory for deviceTable. File: init.c. Function initproc()");
+    }
+    initDeviceTable();
 
     create(&idleproc, 8000);
     create(&root, 8000);
@@ -105,7 +112,7 @@ void initProcessTable( void ){
         pcbTableHead[i].reuseCount = -1;
         pcbTableHead[i].head = &stopQueueHead;
         pcbTableHead[i].tail = &stopQueueTail;
-        ready(pcbTableHead+i, &stopQueueHead, &stopQueueTail, STATE_READY);
+        ready(pcbTableHead+i, &stopQueueHead, &stopQueueTail, STATE_STOPPED);
     }
     //struct pcb *pcbTableHeadTest = pcbTable;
     /* test to make sure that stopped queue is set up with 32 pcbs
@@ -116,6 +123,23 @@ void initProcessTable( void ){
        }
        */
 
+}
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  initDeviceTable
+ *  Description:  initiate the device table 
+ * =====================================================================================
+ */
+void initDeviceTable( void ){
+    struct devsw *deviceTableHead = deviceTable;
+    int i;
+    for(i = 0; i < DEVICETABLESIZE; i++){
+        deviceTableHead[i].dvnum = i;
+    }
+    //we probably don't need a for loop since just two divices not sure at this point
+    //will add the names manually
+    deviceTableHead[0].dvname = "ECHOING_KEYBOARD";
+    deviceTableHead[1].dvname = "NON_ECHOING_KEYBOARD";
 }
 
 static void idleproc( void ){

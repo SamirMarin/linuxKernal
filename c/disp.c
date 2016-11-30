@@ -156,6 +156,34 @@ void dispatch(void) {
                     process->rc = getCPUtimes(process, ps);
                     break;
                 }
+            case(OPEN):
+                {
+                    int device_no = (int) *(process->args + 1);
+
+
+                }
+            case(CLOSE):
+                {
+                    int fd = (int) *(process->args + 1);
+
+                }
+                case(WRITE):
+                {
+                    int fd = (int) *(process->args + 1);
+                    void *buff = (void*) *(process->args + 2);
+                    int bufflen = (int) *(process->args + 3);
+                }
+            case(READ):
+                {
+                    int fd = (int) *(process->args + 1);
+                    void *buff = (void*) *(process->args + 2);
+                    int bufflen = (int) *(process->args + 3);
+                }
+            case(IOCTL):
+                {
+                    // this can take multiple arguments so we need to figure out how we want to go about our 
+                    // syscall since we are not using va_list anymore
+                }
             default:    
                 {
                     kprintf("ERROR, request is: %d function: dispatch, file: disp.c", request);
