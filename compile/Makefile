@@ -41,6 +41,7 @@ LDSTR	= -e start -Ttext ${TEXTSPOT}
 SOBJ = startup.o intr.o 
 IOBJ = init.o i386.o evec.o kprintf.o
 UOBJ = mem.o disp.o ctsw.o syscall.o create.o user.o msg.o sleep.o signal.o
+UOBJ += kbd.o di_calls.o
 
 #Add your sources here
 MY_OBJ = 
@@ -87,3 +88,7 @@ user.o: ../c/user.c ../h/xeroskernel.h ../h/xeroslib.h
 msg.o: ../c/msg.c ../h/xeroskernel.h ../h/xeroslib.h 
 sleep.o: ../c/sleep.c ../h/xeroskernel.h ../h/xeroslib.h
 signal.o: ../c/signal.c ../h/xeroskernel.h ../h/xeroslib.h
+# at the bottom of the compile/Makefile, add:
+kbd.o: ../c/kbd.c ../h/xeroskernel.h ../h/kbd.h
+di_calls.o: ../c/di_calls.c ../h/xeroskernel.h
+	

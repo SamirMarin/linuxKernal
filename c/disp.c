@@ -159,25 +159,30 @@ void dispatch(void) {
             case(OPEN):
                 {
                     int device_no = (int) *(process->args + 1);
-
-
+                    process->rc = di_open(process, device_no);
+                    break;
                 }
             case(CLOSE):
                 {
                     int fd = (int) *(process->args + 1);
-
+                    process->rc = di_close(process, fd);
+                    break;
                 }
                 case(WRITE):
                 {
                     int fd = (int) *(process->args + 1);
                     void *buff = (void*) *(process->args + 2);
                     int bufflen = (int) *(process->args + 3);
+                    process->rc = di_write(process, fd, buff, bufflen);
+                    break;
                 }
             case(READ):
                 {
                     int fd = (int) *(process->args + 1);
                     void *buff = (void*) *(process->args + 2);
                     int bufflen = (int) *(process->args + 3);
+                    process->rc = di_read(process, fd, buff, bufflen);
+                    break;
                 }
             case(IOCTL):
                 {

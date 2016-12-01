@@ -15,6 +15,7 @@ int create(void (*func)(void), int stackSize);
 int nextPid(int reused_count, int index);
 int createIdle(void (*func)(void), int stackSize);
 struct pcb * setup_pcb(void (*func)(void), int stackSize);
+void initFDT( struct FD *fd);
 
 /* 
  * ===  FUNCTION  ======================================================================
@@ -89,6 +90,7 @@ struct pcb * setup_pcb(void (*func)(void), int stackSize) {
     for (i = 0; i < SIGNALMAX; i++) {
             newPcb->sigFunctions[i] = NULL;
     }
+    initFDT(newPcb->FDT);
     *return_address = (unsigned long) &sysstop;
     newPcb->memoryStart = (unsigned long*) topStack;
     newPcb->cpuState = (struct CPU*) cpuStatePointer;
@@ -123,4 +125,11 @@ struct pcb * setup_pcb(void (*func)(void), int stackSize) {
  */
 int nextPid(int reuseCount, int index){
     return (PCBTABLESIZE * reuseCount) + index;
+}
+void initFDT( struct FD *fd){
+    int i;
+    for(i = 0; i < FDTSIZE; i++){
+        fd[i].index = i;
+        fd[i].majorNum = -1;
+    }
 }

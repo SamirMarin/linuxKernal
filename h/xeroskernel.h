@@ -46,6 +46,7 @@ void           set_evec(unsigned int xnum, unsigned long handler);
 #define PCBTABLESIZE 32
 #define SIGNALMAX 31
 #define DEVICETABLESIZE 2
+#define FDTSIZE 4
 //constants to track state that a process is in
 #define STATE_STOPPED 0
 #define STATE_READY 1
@@ -96,7 +97,15 @@ struct CPU {
     unsigned long iret_cs;
     unsigned long eflags;
 };
-
+struct FD{
+    int index;
+    int majorNum;
+    struct devsw *dvBlock;
+    int status;
+    char *name;
+    struct FD *prev;
+    struct FD *next;
+}; 
 //stores process information
 struct pcb {
     int pid; // process ID
@@ -122,11 +131,7 @@ struct pcb {
     struct pcb *recvQTail;
     struct pcb *waitQHead;// pointer to the list of pcb's that are waiting for this process to die
     struct pcb *waitQTail;
-    struct FD *FDT; //pointer to the FDT for this process always size four initiated with sysopen
-    struct FD *FDTFreeHead;// pointer to head of the entries in FDT table for process currently free for a device to use
-    struct FD *FDTFreeTail;// pointer to tail of the entries in FDT table for process currently free for a device to use
-    struct FD *FDTBusyHead;// pointer to head of the entries in FDT table for process currently in use by device
-    struct FD *FDTBusyTail;// pointer to tail of the entries in FDT table for process currently in use by device
+    struct FD FDT[FDTSIZE]; //pointer to the FDT for this process always size four initiated with sysopen
 };
 
 // enum representing type of system calls available
@@ -158,16 +163,6 @@ struct processStatuses {
   long  cpuTime[PCBTABLESIZE]; // CPU time used in milliseconds
 };
 
-struct FD{
-    int index;
-    int majorNum;
-    struct devsw *dvBlock;
-    int status;
-    char *name;
-    struct FD *prev;
-    struct FD *next;
-}; 
-
 struct devsw{
     int dvnum;
     char *dvname;
@@ -188,6 +183,10 @@ struct devsw{
     int *dvioblk;
     int dvminor;
 };
+extern int di_open(struct pcb *process, int device_no);
+extern int di_close(struct pcb *process, int fd);
+extern int di_write(struct pcb *process, int fd, unsigned char *buff, int size);
+extern int di_read(struct pcb *process, int fd, unsigned char *buff, int size);
 
 // ctsw.c functions
 extern int contextswitch(struct pcb* process);
