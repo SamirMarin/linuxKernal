@@ -3,7 +3,6 @@
 */
 
 #include <xeroskernel.h>
-#include <stdarg.h>
 
 
 int di_open(struct pcb *process, int device_no);

@@ -91,4 +91,3 @@ signal.o: ../c/signal.c ../h/xeroskernel.h ../h/xeroslib.h
 # at the bottom of the compile/Makefile, add:
 kbd.o: ../c/kbd.c ../h/xeroskernel.h ../h/kbd.h
 di_calls.o: ../c/di_calls.c ../h/xeroskernel.h
-	
