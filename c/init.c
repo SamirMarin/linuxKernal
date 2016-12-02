@@ -79,6 +79,7 @@ void initproc( void )				/* The beginning */
         kprintf("\n\nCould not allocate memory for deviceTable. File: init.c. Function initproc()");
     }
     initDeviceTable();
+    enable_irq(1,0);
 
     create(&idleproc, 8000);
     create(&root, 8000);

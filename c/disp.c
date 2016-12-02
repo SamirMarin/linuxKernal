@@ -188,6 +188,14 @@ void dispatch(void) {
                 {
                     // this can take multiple arguments so we need to figure out how we want to go about our 
                     // syscall since we are not using va_list anymore
+                    break;
+                }
+
+            case (KEYBOARD):
+                {
+                    kbd_read_in();
+                    end_of_intr();
+                    break;
                 }
             default:    
                 {
@@ -205,12 +213,13 @@ void dispatch(void) {
  */
 void cleanup(struct pcb *process) {
     //testCleanup();
+    kprintf("PID: %d, RETURNING MEMORY: %d\n", process->pid, process->memoryStart);
     process->pid = -1;
     process->state = STATE_STOPPED;
-    kfree(process->memoryStart);
     clearWaitingProcesses(&(process->sendQHead), &(process->sendQTail), -1);
     clearWaitingProcesses(&(process->recvQHead), &(process->recvQTail), -1);
     clearWaitingProcesses(&(process->waitQHead), &(process->waitQTail), 0);
+    kfree(process->memoryStart);
     ready(process, &stopQueueHead, &stopQueueTail, STATE_STOPPED);
     //testCleanup();
 }
@@ -468,7 +477,7 @@ int ready(struct pcb *process, struct pcb **head, struct pcb **tail, int state){
         process->state = state;
         return 1;
     }
-    kprintf("\n\n one of readyQueueHead or readyQueueTail is NULL\n file: disp.c\n function: ready");
+    kprintf("\n\n one of QueueHead or QueueTail is NULL\n file: disp.c\n function: ready");
     return 0;
 }
 

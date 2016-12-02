@@ -100,6 +100,8 @@ void* kmalloc(int size) {
 
         // Don't insert a new free space header because we will be outside valid memory
         if ((newFreeSpaceLocation >= HOLESTART) || (newFreeSpaceLocation >= 0x400000)) {
+            foundNode->size = finalSize;
+            foundNode->sanityCheck = (char*) SANITYCHECK;
             return (void*) &(foundNode->dataStart);
         }
 
@@ -113,8 +115,9 @@ void* kmalloc(int size) {
         if(!newFreeSpace->size){
             kprintf("\n\ninserted memory with size 0\n file: mem.c\n function: kmalloc");
         }
-        foundNode->size = finalSize;
 
+        foundNode->size = finalSize;
+        foundNode->sanityCheck = (char*) SANITYCHECK;
         return (void*) &(foundNode->dataStart);
     }
 }

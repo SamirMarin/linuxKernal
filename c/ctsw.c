@@ -11,6 +11,7 @@
    */
 void _ISREntryPoint(void);
 void _TimerEntryPoint(void);
+void _KeyboardEntryPoint(void);
 static void *k_stack;
 static unsigned long ESP; 
 static int rc, interrupt;
@@ -38,6 +39,11 @@ int contextswitch(struct pcb* process){
             "movl ESP, %%esp\n\t"
             "popa\n\t"
             "iret\n"
+            "_KeyboardEntryPoint:\n\t"
+            "cli\n\t"
+            "pusha\n\t"
+            "movl $2, %%ecx\n\t"
+            "jmp _CommonEntryPoint\n"
             "_TimerEntryPoint:\n\t"
             "cli\n\t"
             "pusha\n\t"
@@ -61,10 +67,14 @@ int contextswitch(struct pcb* process){
 
     process->args = (unsigned long*) (ESP + 44);
 
-    if (interrupt) {
+    if (interrupt == 1) {
         unsigned long *eax_register = (unsigned long*) (ESP + 28);
         process->rc = *eax_register;
         rc = TIMER_INT;
+    } else if (interrupt == 2) {
+        unsigned long *eax_register = (unsigned long*) (ESP + 28);
+        process->rc = *eax_register;
+        rc = KEYBOARD;
     } else {
         rc = *(process->args);
     }
@@ -88,4 +98,5 @@ int contextswitch(struct pcb* process){
 void contextinit(void){
     set_evec(67, (unsigned long) _ISREntryPoint);
     set_evec(32, (unsigned long) _TimerEntryPoint);
+    set_evec(33, (unsigned long) _KeyboardEntryPoint);
 }

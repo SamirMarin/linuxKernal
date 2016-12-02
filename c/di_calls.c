@@ -67,8 +67,11 @@ int di_read(struct pcb *process, int fd, unsigned char *buff, int size){
         return -1;
     }
     devreadptr = process->FDT[fd].dvBlock;
-    //TODO: fix this return according to how we implement the write
-    return (devreadptr->dvwrite)(devreadptr, buff, size);
+    int res = (devreadptr->dvread)(devreadptr, buff, size);
+    if (!res) {
+
+
+    }
 
 }
 

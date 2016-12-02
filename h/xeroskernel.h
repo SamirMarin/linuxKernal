@@ -154,7 +154,8 @@ enum SystemEvents {
     CLOSE,
     WRITE,
     READ,
-    IOCTL
+    IOCTL,
+    KEYBOARD
 };
 
 struct processStatuses {
@@ -169,7 +170,7 @@ struct devsw{
     int (*dvinit)(void);
     int (*dvopen)(void);
     int (*dvclose)(struct devsw*);
-    int (*dvread)(void);
+    int (*dvread)(struct devsw*, void*, int);
     int (*dvwrite)(struct devsw*, void*, int);
     int (*dvseek)(void);
     int (*dvgetc)(void);
@@ -220,6 +221,8 @@ extern void tick(void);
 // signal.c
 extern int signal(int pid, int sig_no);
 extern void sigtramp(void (*handler)(void*), void *cntx);
+// kbd.c
+int kbd_read_in(void);
 
 
 
