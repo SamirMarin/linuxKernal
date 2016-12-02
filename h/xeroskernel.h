@@ -171,7 +171,7 @@ struct devsw{
     char *dvname;
     int (*dvopen)(struct devsw*, int);
     int (*dvclose)(struct devsw*);
-    int (*dvread)(struct devsw*, void*, int);
+    int (*dvread)(struct devsw*, struct pcb*, void*, int);
     int (*dvwrite)(struct devsw*, void*, int);
     int (*dvioctl)(struct devsw*, unsigned long, int);
     int *dvcsr;

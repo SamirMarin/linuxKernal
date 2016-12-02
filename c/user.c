@@ -5,7 +5,7 @@
 #include <xeroslib.h>
 
 #define BUF_MAX 36
-char *username = "cs415\n";
+char *username = "cs415";
 char *password = "EveryoneGetsAnA";
 
 void shell(void);
@@ -28,7 +28,7 @@ void  root( void ) {
         }
 
         // Turn keyboard echoing on;
-        error = sysioctl(fd, 55);
+        error = sysioctl(fd, 56);
         if (error == -1) {
             kprintf("Error turning keyboard echoing on\n");
             for(;;);
@@ -46,7 +46,7 @@ void  root( void ) {
         }
         ubuf[bytes] = NULLCH;
         // Turn keyboard echoing off;
-        error = sysioctl(fd, 56);
+        error = sysioctl(fd, 55);
         if (error == -1) {
             kprintf("Error turning keyboard echoing off\n");
             for(;;);
@@ -67,6 +67,10 @@ void  root( void ) {
             kprintf("Error turning closing device\n");
             for(;;);
         }
+        int usercheck = strcmp(&ubuf, username);
+        int passcheck = strcmp(&pbuf, password);
+        kprintf("\n user check %d, pass check %d", usercheck, passcheck);
+        kprintf("\n user in %c, pass in %c", ubuf[8], &pbuf[8]);
         if (strcmp(ubuf, username) == 0 && strcmp(pbuf, password) == 0) {
             break;
         }

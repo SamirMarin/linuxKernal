@@ -75,7 +75,6 @@ int contextswitch(struct pcb* process){
         unsigned long *eax_register = (unsigned long*) (ESP + 28);
         process->rc = *eax_register;
         rc = KEYBOARD;
-        kprintf("INTERRUPT: %d\n", interrupt);
     } else {
         rc = *(process->args);
     }

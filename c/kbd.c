@@ -146,7 +146,6 @@ int kbd_read_in() {
 
     if (parsedCharacter == NOCHAR) {
         // discard uneeded scan codes
-        kprintf("at three\n");
         return -4;
     }
     char character = (char) parsedCharacter;
@@ -227,7 +226,7 @@ unsigned int kbtoa( unsigned char code )
         case LSHIFT:
         case RSHIFT:
             state |= INSHIFT;
-            kprintf("shift detected!\n");
+            //kprintf("shift detected!\n");
             return NOCHAR;
         case CAPSL:
             state |= CAPSLOCK;
