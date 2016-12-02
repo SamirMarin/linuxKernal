@@ -190,7 +190,6 @@ void dispatch(void) {
                     // syscall since we are not using va_list anymore
                     break;
                 }
-
             case (KEYBOARD):
                 {
                     kbd_read_in();
@@ -484,8 +483,8 @@ int ready(struct pcb *process, struct pcb **head, struct pcb **tail, int state){
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:  next
- *  Description:  removes a pcp struct from given list identified by the given head.
- *       Return:  return pcp struct, null if non availble in given list
+ *  Description:  removes a pcb struct from given list identified by the given head.
+ *       Return:  return pcb struct, null if non availble in given list
  * =====================================================================================
  */
 struct pcb* next(struct pcb **head, struct pcb **tail){

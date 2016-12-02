@@ -1,163 +1,261 @@
 #include <xeroskernel.h>
+#include <i386.h>
 #include <kbd.h>
 
+static char kbuf[MAX_KBUF_SIZE];
+static int kBytesRead = 0;
 
-char keybuf[4];
-int  buffBytes;
+static char TOGGLE_ECHO = 1;
+static char KB_IN_USE = 0;
 
-char ENABLE_ECHO = 0;
-char ECHO_IN_USE = 0;
-char NON_ECHO_IN_USE = 0;
+// Stores exactly one request for the keyboard
+static struct dataRequest kbDataRequest;
 
-struct request* reqHead;
-struct request* reqTail;
-static int state; /* the state of the keyboard */
+static int state; /* the modifer key state of the keyboard */
 
 unsigned int kbtoa( unsigned char code );
+int done(int retCode);
+int kb_open(int majorNum);
+int kb_close(const struct devsw* const dvBlock);
+int kb_ioctl(const struct devsw* const dvBlock);
+int kb_read(const struct devsw * const dvBlock, struct pcb * const process, void *buff, int size);
+int copyCharactersToBuffer(char *outBuf, int outBufSize, int outBufBytesRead, char * inBuf, int inBufSize, int inBufBytesRead);
+static int extchar(unsigned char code);
+
+int kb_open(int majorNum) {
+    if (KB_IN_USE) {
+        //return failure
+    }
+
+    if (!majorNum) {
+        // Make sure echo is turned off
+        TOGGLE_ECHO = 0;
+    }
+    if (majorNum) {
+        TOGGLE_ECHO = 1;
+    }
+    // Getting a compiler warning for this one
+    KB_IN_USE = 1;
+    //enable_irq(1,0);
+    return 0;
+}
 
 
-int ekbd_read(void * buff, int size) {
+int kb_close(const struct devsw* const dvBlock) {
+    if (!KB_IN_USE) {
+        //return failure
+    }
+    if (!dvBlock->dvnum) {
+        // closing steps for device one
+    }
+    if (dvBlock->dvnum == 1) {
 
+    }
+    KB_IN_USE = 0;
+    return 0;
+}
+
+int kb_ioctl(const struct devsw* const dvBlock) {
 
     return 0;
 }
 
 
-void done(struct request *req) {
+int kb_read(const struct devsw * const dvBlock, struct pcb * p, void *buff, int size) {
+    if (dvBlock->dvnum) {
+        // device 1 specific stuff
 
 
+    }
+    if (!dvBlock->dvnum) {
+        // device 0 specific stuff
 
+    }
+    int bytesRead = 0;
+    if (kBytesRead > 0) {
+        copyCharactersToBuffer(buff, size, 0, &kbuf[0], MAX_KBUF_SIZE, kBytesRead);
+
+    }
+    if (bytesRead == size) {
+        p->rc = 0;
+        // we're done with this sysread call;
+        return 0;
+    }
+    kbDataRequest.status = 1;
+    kbDataRequest.buff = buff;
+    kbDataRequest.size = size;
+    kbDataRequest.bytesRead = bytesRead;
+    kbDataRequest.done = &done;
+    kbDataRequest.blockedProc = p;
+    p->state = STATE_DEV_WAITING;
+    return 0;
 }
 
 
-// ==================================
-//            LOWER HALF
-// ==================================
-int kbd_close(struct devsw* dblock) {
+int done(int retCode) {
 
-    // disable hardware
-return 0;
+    struct pcb * p =  kbDataRequest.blockedProc;
+    kbDataRequest.status = 0;
+    kbDataRequest.blockedProc = NULL;
+    kbDataRequest.size = 0;
+    kbDataRequest.bytesRead = 0;
+    p->rc = retCode;
+    ready(p, &readyQueueHead, &readyQueueTail, STATE_READY);
+    return 0;
 }
 
+
+//===================================
+//          LOWER HALF
+//===================================
 
 int kbd_read_in() {
     unsigned char ctrlByte = inb(CTRL_PORT);
     if (!(ctrlByte & 1)) {
         // nothing to read, spurious interrupt
-        return -1;
+        return -2;
     }
-    unsigned long scanCode = inb(READ_PORT);
-    char character = kbtoa(scanCode);
-    kprintf("Scan code: %x, Character: %c\n", scanCode, character);
-
-    if (!reqHead) {
-        // put it in local buffer
-    } else {
-        // put it in the request buffer
-
-
+    if (kBytesRead == MAX_KBUF_SIZE) {
+        // discard characters because buffer is full
+        kprintf("KEYBOARD BUFFER FULL\n");
+        kprintf("BYTES READ: %d\n", kBytesRead);
+        return -3;
     }
+    unsigned char scanCode = inb(READ_PORT);
+    unsigned long parsedCharacter = kbtoa(scanCode);
 
+    if (parsedCharacter == NOCHAR) {
+        // discard uneeded scan codes
+        return -4;
+    }
+    char character = (char) parsedCharacter;
+    if (state == INCTL && character == 0x4) {
+        kprintf("CTRL-D/EOF DETECTED!!!\n");
+
+        // Disable interrupts
+        //enable_irq(1,1);
+        return EOF;
+    }
+    if (TOGGLE_ECHO) {
+        kprintf("%c", character);
+    }
+    // Put it in the buffer
+    if (kBytesRead < MAX_KBUF_SIZE) {
+        kbuf[kBytesRead] = character;
+        kBytesRead++;
+    }
+    if (kbDataRequest.status) {
+        char * buff = kbDataRequest.buff;
+        int bytesRead = kbDataRequest.bytesRead;
+        int size = kbDataRequest.size;
+        // Copy as much from the buffer into the dataRequest
+        bytesRead = copyCharactersToBuffer(buff, size, bytesRead, &kbuf[0], MAX_KBUF_SIZE, kBytesRead);
+        if (bytesRead == size || character == '\n') {
+            kbDataRequest.done(bytesRead);
+        }
+    }
     return 0;
 }
 
-
-
-
-
-
-
-
-unsigned char   code;
-static int extchar(code)
-{
-        return state &= ~EXTENDED;
+int copyCharactersToBuffer(char *outBuf, int outBufSize, int outBufBytesRead, char * inBuf, int inBufSize, int inBufBytesRead) {
+    int bytesCopied = 0;
+    while (outBufBytesRead < outBufSize && bytesCopied < inBufBytesRead) {
+        outBuf[outBufSize] = inBuf[inBufSize - inBufBytesRead];
+        inBufBytesRead--;
+        outBufBytesRead++;
+    }
+    return outBufBytesRead;
 }
 
 
+static int extchar(unsigned char code) {
+    return state &= ~EXTENDED;
+}
 
 
 unsigned int kbtoa( unsigned char code )
 {
-  unsigned int ch;
-  
-  if (state & EXTENDED)
-    return extchar(code);
-  if (code & KEY_UP) {
-    switch (code & 0x7f) {
-    case LSHIFT:
-    case RSHIFT:
-      state &= ~INSHIFT;
-      break;
-    case CAPSL:
-      kprintf("Capslock off detected\n");
-      state &= ~CAPSLOCK;
-      break;
-    case LCTL:
-      state &= ~INCTL;
-      break;
-    case LMETA:
-      state &= ~INMETA;
-      break;
+    unsigned int ch;
+
+    if (state & EXTENDED)
+        return extchar(code);
+
+    if (code & KEY_UP) {
+        switch (code & 0x7f) {
+            case LSHIFT:
+            case RSHIFT:
+                state &= ~INSHIFT;
+                break;
+            case CAPSL:
+                kprintf("Capslock off detected\n");
+                state &= ~CAPSLOCK;
+                break;
+            case LCTL:
+                state &= ~INCTL;
+                break;
+            case LMETA:
+                state &= ~INMETA;
+                break;
+        }
+
+        return NOCHAR;
     }
-    
-    return NOCHAR;
-  }
-  
-  
-  /* check for special keys */
-  switch (code) {
-  case LSHIFT:
-  case RSHIFT:
-    state |= INSHIFT;
-    kprintf("shift detected!\n");
-    return NOCHAR;
-  case CAPSL:
-    state |= CAPSLOCK;
-    kprintf("Capslock ON detected!\n");
-    return NOCHAR;
-  case LCTL:
-    state |= INCTL;
-    return NOCHAR;
-  case LMETA:
-    state |= INMETA;
-    return NOCHAR;
-  case EXTESC:
-    state |= EXTENDED;
-    return NOCHAR;
-  }
-  
-  ch = NOCHAR;
-  
-  if (code < sizeof(kbcode)){
-    if ( state & CAPSLOCK )
-      ch = kbshift[code];
-	  else
-	    ch = kbcode[code];
-  }
-  if (state & INSHIFT) {
-    if (code >= sizeof(kbshift))
-      return NOCHAR;
-    if ( state & CAPSLOCK )
-      ch = kbcode[code];
-    else
-      ch = kbshift[code];
-  }
-  if (state & INCTL) {
-    if (code >= sizeof(kbctl))
-      return NOCHAR;
-    ch = kbctl[code];
-  }
-  if (state & INMETA)
-    ch += 0x80;
-  return ch;
+
+
+    /* check for special keys */
+    switch (code) {
+        case LSHIFT:
+        case RSHIFT:
+            state |= INSHIFT;
+            kprintf("shift detected!\n");
+            return NOCHAR;
+        case CAPSL:
+            state |= CAPSLOCK;
+            kprintf("Capslock ON detected!\n");
+            return NOCHAR;
+        case LCTL:
+            state |= INCTL;
+            kprintf("CTRL detected!\n");
+            return NOCHAR;
+        case LMETA:
+            state |= INMETA;
+            return NOCHAR;
+        case EXTESC:
+            state |= EXTENDED;
+            return NOCHAR;
+    }
+
+    ch = NOCHAR;
+
+    if (code < sizeof(kbcode)){
+        if ( state & CAPSLOCK )
+            ch = kbshift[code];
+        else
+            ch = kbcode[code];
+    }
+    if (state & INSHIFT) {
+        if (code >= sizeof(kbshift))
+            return NOCHAR;
+        if ( state & CAPSLOCK )
+            ch = kbcode[code];
+        else
+            ch = kbshift[code];
+    }
+    if (state & INCTL) {
+        if (code >= sizeof(kbctl))
+            return NOCHAR;
+        ch = kbctl[code];
+    }
+    if (state & INMETA)
+        ch += 0x80;
+    return ch;
 }
 
 
 
-//===================================
-//          HELPER FUNCTIONS
-//===================================
+//===============================================
+//   HELPER FUNCTIONS (NOT USING CURRENTLY)
+//===============================================
 
 /* 
  * ===  FUNCTION  ======================================================================
@@ -166,31 +264,24 @@ unsigned int kbtoa( unsigned char code )
  *       Return:  1 if sucessful 0 if unsucessful
  * =====================================================================================
  */
-int queueRequest(struct pcb *process, struct pcb **head, struct pcb **tail, int state){
-    if(!process){
+int queueRequest(struct dataRequest *dr, struct dataRequest **head, struct dataRequest **tail, int status){
+    if(!dr){
         return -1;
     }
-    if(process == idleProcessHead){
-        return -2;
-    }
     if(!*head && !*tail){
-        *head = process;
-        *tail = process;
-        process->prev = NULL;
-        process->next = NULL;
-        process->head = head;
-        process->tail = tail;
-        process->state = state;
+        *head = dr;
+        *tail = dr;
+        dr->prev = NULL;
+        dr->next = NULL;
+        dr->status = status;
         return 1;
     }
     if(*head && *tail){
-        (*tail)->next = process;
-        process->prev = *tail;
-        *tail = process;
-        process->head = head;
-        process->tail = tail;
+        (*tail)->next = dr;
+        dr->prev = *tail;
+        *tail = dr;
         (*tail)->next = NULL;
-        process->state = state;
+        dr->status = status;
         return 1;
     }
     kprintf("\n\n one of QueueHead or QueueTail is NULL\n file: disp.c\n function: ready");
@@ -200,11 +291,11 @@ int queueRequest(struct pcb *process, struct pcb **head, struct pcb **tail, int 
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:  next
- *  Description:  removes a pcp struct from given list identified by the given head.
- *       Return:  return pcp struct, null if non availble in given list
+ *  Description:  removes a pcb struct from given list identified by the given head.
+ *       Return:  return pcb struct, null if non availble in given list
  * =====================================================================================
  */
-struct request* nextRequest(struct request **head, struct request **tail){
+struct dataRequest* nextRequest(struct dataRequest **head, struct dataRequest **tail){
     if(!*head){
         // gets idle process only if dealing with ready queue
         return NULL;
@@ -213,14 +304,12 @@ struct request* nextRequest(struct request **head, struct request **tail){
     if (*head == *tail) {
         *tail = NULL;
     }
-    struct pcb *nextProcess = *head;
+    struct dataRequest *nextDr = *head;
     *head = (*head)->next;
-    nextProcess->next = NULL;
-    nextProcess->prev = NULL;
+    nextDr->next = NULL;
+    nextDr->prev = NULL;
     (*head)->prev = NULL;
-    nextProcess->head = NULL;
-    nextProcess->tail = NULL;
-    return nextProcess;
+    return nextDr;
 }
 
 

@@ -22,6 +22,7 @@
 #define NOCHAR  256
 
 
+
 /*  Normal table to translate scan code  */
 unsigned char   kbcode[] = { 0,
           27,  '1',  '2',  '3',  '4',  '5',  '6',  '7',  '8',  '9',
@@ -47,18 +48,22 @@ unsigned char   kbctl[] = { 0,
           19,    4,    6,    7,    8,   10,   11,   12,    0,    0,
            0,    0,   28,   26,   24,    3,   22,    2,   14,   13 };
 
+// END OF PROVIDED CODE
 
 
 
 
+
+#define MAX_KBUF_SIZE 4
 #define READ_PORT 0x60
 #define CTRL_PORT 0x64
-struct request {
+struct dataRequest {
+	int status;
     char *buff;
     int size;
     int bytesRead;
-    int rc;
-    struct request *next;
-    struct request *prev;
-    void (*done)(struct request*);
+    struct dataRequest *next;
+    struct dataRequest *prev;
+    struct pcb * blockedProc;
+    int (*done)(int retCode);
 };

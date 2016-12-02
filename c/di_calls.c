@@ -69,9 +69,9 @@ int di_read(struct pcb *process, int fd, unsigned char *buff, int size){
     devreadptr = process->FDT[fd].dvBlock;
     int res = (devreadptr->dvread)(devreadptr, buff, size);
     if (!res) {
-
-
+        // read error handling specific stuff
     }
+    return res;
 
 }
 

@@ -47,6 +47,7 @@ void           set_evec(unsigned int xnum, unsigned long handler);
 #define SIGNALMAX 31
 #define DEVICETABLESIZE 2
 #define FDTSIZE 4
+
 //constants to track state that a process is in
 #define STATE_STOPPED 0
 #define STATE_READY 1
@@ -55,6 +56,7 @@ void           set_evec(unsigned int xnum, unsigned long handler);
 #define STATE_RECV 29
 #define STATE_SEND 34 
 #define STATE_WAITING 47
+#define STATE_DEV_WAITING 92
 
 //Time slice constant
 #define TIMESLICE 100 // must change both these values. one is dependent on the other
