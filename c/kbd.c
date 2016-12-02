@@ -133,13 +133,6 @@ int kbd_read_in() {
         return -4;
     }
     char character = (char) parsedCharacter;
-    if (state == INCTL && character == 0x4) {
-        kprintf("CTRL-D/EOF DETECTED!!!\n");
-
-        // Disable interrupts
-        //enable_irq(1,1);
-        return EOF;
-    }
     if (TOGGLE_ECHO) {
         kprintf("%c", character);
     }
@@ -156,6 +149,11 @@ int kbd_read_in() {
         bytesRead = copyCharactersToBuffer(buff, size, bytesRead, &kbuf[0], MAX_KBUF_SIZE, &kBytesRead);
         if (bytesRead == size || character == '\n') {
             kbDataRequest.done(bytesRead);
+        } else if (state == INCTL && character == 0x4) {
+            kprintf("CTRL-D/EOF DETECTED!!!\n");
+
+        // Disable interrupts
+        //enable_irq(1,1);
         }
     }
     return 0;
