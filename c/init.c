@@ -74,11 +74,13 @@ void initproc( void )				/* The beginning */
         for(;;);
     }
     initProcessTable();
+
     deviceTable = (struct devsw*) kmalloc(DEVICETABLESIZE*sizeof(struct devsw));
     if(!deviceTable) {
         kprintf("\n\nCould not allocate memory for deviceTable. File: init.c. Function initproc()");
     }
     initDeviceTable();
+
     enable_irq(1,0);
 
     create(&idleproc, 8000);
@@ -136,9 +138,12 @@ void initDeviceTable( void ){
     int i;
     for(i = 0; i < DEVICETABLESIZE; i++){
         deviceTableHead[i].dvnum = i;
+        deviceTableHead[i].dvopen = &kb_open;
+        deviceTableHead[i].dvclose = &kb_close;
+        deviceTableHead[i].dvread =  &kb_read;
+        deviceTableHead[i].dvwrite = &kb_write;
+        deviceTableHead[i].dvioctl = &kb_ioctl;
     }
-    //we probably don't need a for loop since just two divices not sure at this point
-    //will add the names manually
     deviceTableHead[0].dvname = "ECHOING_KEYBOARD";
     deviceTableHead[1].dvname = "NON_ECHOING_KEYBOARD";
 }

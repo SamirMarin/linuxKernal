@@ -169,22 +169,16 @@ struct processStatuses {
 struct devsw{
     int dvnum;
     char *dvname;
-    int (*dvinit)(void);
     int (*dvopen)(void);
     int (*dvclose)(struct devsw*);
     int (*dvread)(struct devsw*, void*, int);
     int (*dvwrite)(struct devsw*, void*, int);
-    int (*dvseek)(void);
-    int (*dvgetc)(void);
-    int (*dvputc)(void);
-    int (*dvcntl)(void);
+    int (*dvioctl)(void);
     int *dvcsr;
     int *dvivec;
     int *dvovec;
     int (*dviint)(void);
     int (*dvoint)(void);
-    int *dvioblk;
-    int dvminor;
 };
 extern int di_open(struct pcb *process, int device_no);
 extern int di_close(struct pcb *process, int fd);
@@ -225,6 +219,11 @@ extern int signal(int pid, int sig_no);
 extern void sigtramp(void (*handler)(void*), void *cntx);
 // kbd.c
 int kbd_read_in(void);
+int kb_open(int majorNum);
+int kb_close(const struct devsw* const dvBlock);
+int kb_ioctl(const struct devsw* const dvBlock);
+int kb_read(const struct devsw * const dvBlock, struct pcb * const process, void *buff, int size);
+int kb_write(const struct devsw * const dvBlock);
 
 
 
