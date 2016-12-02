@@ -111,6 +111,8 @@ int done(int retCode) {
 
 int kbd_read_in() {
     unsigned char ctrlByte = inb(CTRL_PORT);
+    unsigned char scanCode = inb(READ_PORT);
+    unsigned long parsedCharacter = kbtoa(scanCode);
     if (!(ctrlByte & 1)) {
         // nothing to read, spurious interrupt
         return -2;
@@ -121,11 +123,10 @@ int kbd_read_in() {
         kprintf("BYTES READ: %d\n", kBytesRead);
         return -3;
     }
-    unsigned char scanCode = inb(READ_PORT);
-    unsigned long parsedCharacter = kbtoa(scanCode);
 
     if (parsedCharacter == NOCHAR) {
         // discard uneeded scan codes
+        kprintf("at three\n");
         return -4;
     }
     char character = (char) parsedCharacter;
