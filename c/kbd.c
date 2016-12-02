@@ -85,10 +85,11 @@ int kb_ioctl(const struct devsw* const dvBlock, unsigned long command, int val) 
 
 
 int kb_read(const struct devsw * const dvBlock, struct pcb * p, void *buff, int size) {
+    if (!p) {
+        return -1;
+    } 
     if (dvBlock->dvnum) {
         // device 1 specific stuff
-
-
     }
     if (!dvBlock->dvnum) {
         // device 0 specific stuff
@@ -113,15 +114,15 @@ int kb_read(const struct devsw * const dvBlock, struct pcb * p, void *buff, int 
 }
 
 
-int done(int retCode) {
+int done() {
 
     struct pcb * p =  kbDataRequest.blockedProc;
+    p->rc = kbDataRequest.bytesRead;
+    ready(p, &readyQueueHead, &readyQueueTail, STATE_READY);
     kbDataRequest.status = 0;
     kbDataRequest.blockedProc = NULL;
     kbDataRequest.size = 0;
     kbDataRequest.bytesRead = 0;
-    p->rc = retCode;
-    ready(p, &readyQueueHead, &readyQueueTail, STATE_READY);
     return 0;
 }
 
@@ -163,8 +164,9 @@ int kbd_read_in() {
         int size = kbDataRequest.size;
         // Copy as much from the buffer into the dataRequest
         bytesRead = copyCharactersToBuffer(buff, size, bytesRead, &kbuf[0], MAX_KBUF_SIZE, &kBytesRead);
+        kbDataRequest.bytesRead = bytesRead;
         if (bytesRead == size || character == '\n') {
-            kbDataRequest.done(bytesRead);
+            kbDataRequest.done();
         } else if (state == INCTL && character == EOFINDICATOR) {
             kprintf("CTRL-D/EOF DETECTED!!!\n");
 
@@ -178,7 +180,7 @@ int kbd_read_in() {
 int copyCharactersToBuffer(char *outBuf, int outBufSize, int outBufBytesRead, char * inBuf, int inBufSize, int *inBufBytesRead) {
     int bytesCopied = 0;
     while (outBufBytesRead < outBufSize && bytesCopied < *inBufBytesRead) {
-        outBuf[outBufSize] = inBuf[bytesCopied];
+        outBuf[outBufBytesRead] = inBuf[bytesCopied];
         outBufBytesRead++;
         bytesCopied++;
     }
