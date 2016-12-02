@@ -208,6 +208,7 @@ extern int syssleep( unsigned int milliseconds );
 extern int sysgetcputimes(struct processStatuses *ps);
 extern int syssighandler(int signal, void(*newHandler)(void*), void(**oldHandler)(void*));
 extern int syssigreturn(void *old_sp);
+extern int syswait(int pid);
 extern int sysopen(int device_no);
 extern int sysclose(int fd);
 extern int syswrite(int fd, void *buff, int bufflen);

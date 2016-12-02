@@ -68,7 +68,8 @@ struct dataRequest {
     int (*done)(int retCode);
 };
 
-int kb_open(int majorNum);
+int kb_open(const struct devsw* const dvBlock, int majorNum);
 int kb_close(const struct devsw* const dvBlock);
-int kb_ioctl(const struct devsw* const dvBlock);
-int kb_read(const struct devsw* const dvBlock, struct pcb * const process, void *buff, int size);
+int kb_ioctl(const struct devsw* const dvBlock, unsigned long command, int val);
+int kb_write(const struct devsw * const dvBlock);
+int kb_read(const struct devsw * const dvBlock, struct pcb * const process, void *buff, int size);
