@@ -169,21 +169,23 @@ struct processStatuses {
 struct devsw{
     int dvnum;
     char *dvname;
-    int (*dvopen)(void);
+    int (*dvopen)(struct devsw*, int);
     int (*dvclose)(struct devsw*);
     int (*dvread)(struct devsw*, void*, int);
     int (*dvwrite)(struct devsw*, void*, int);
-    int (*dvioctl)(void);
+    int (*dvioctl)(struct devsw*, unsigned long, int);
     int *dvcsr;
     int *dvivec;
     int *dvovec;
     int (*dviint)(void);
     int (*dvoint)(void);
 };
+// di_calls.c functions
 extern int di_open(struct pcb *process, int device_no);
 extern int di_close(struct pcb *process, int fd);
 extern int di_write(struct pcb *process, int fd, unsigned char *buff, int size);
 extern int di_read(struct pcb *process, int fd, unsigned char *buff, int size);
+extern int di_ioctl(struct pcb *process, int fd, unsigned long command, int val);
 
 // ctsw.c functions
 extern int contextswitch(struct pcb* process);
@@ -204,8 +206,13 @@ extern int syssend(int dest_pid, unsigned long num);
 extern int sysrecv(unsigned int *from_pid, unsigned long *num);
 extern int syssleep( unsigned int milliseconds );
 extern int sysgetcputimes(struct processStatuses *ps);
-extern int syssighandler(int signal, void(*newHandler)(void*), void(**oldHandler)(void*)) ;
+extern int syssighandler(int signal, void(*newHandler)(void*), void(**oldHandler)(void*));
 extern int syssigreturn(void *old_sp);
+extern int sysopen(int device_no);
+extern int sysclose(int fd);
+extern int syswrite(int fd, void *buff, int bufflen);
+extern int sysread(int fd, void *buff, int bufflen);
+extern int sysioctl(int fd, unsigned long command, ...);
 // user.c 
 extern void root(void);
 // msg.c
@@ -219,9 +226,9 @@ extern int signal(int pid, int sig_no);
 extern void sigtramp(void (*handler)(void*), void *cntx);
 // kbd.c
 int kbd_read_in(void);
-int kb_open(int majorNum);
+int kb_open(const struct devsw* const dvBlock, int majorNum);
 int kb_close(const struct devsw* const dvBlock);
-int kb_ioctl(const struct devsw* const dvBlock);
+int kb_ioctl(const struct devsw* const dvBlock, unsigned long command, int val);
 int kb_read(const struct devsw * const dvBlock, struct pcb * const process, void *buff, int size);
 int kb_write(const struct devsw * const dvBlock);
 

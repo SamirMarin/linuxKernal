@@ -9,6 +9,7 @@ int di_open(struct pcb *process, int device_no);
 int di_close(struct pcb *process, int fd);
 int di_write(struct pcb *process, int fd, unsigned char *buff, int size);
 int di_read(struct pcb *process, int fd, unsigned char *buff, int size);
+int di_ioctl(struct pcb *process, int fd, unsigned long command, int val);
 void initFDT( struct pcb *process );
 int addToQueue(struct FD *fd, struct FD **head, struct FD **tail);
 struct FD* nextFd(struct FD *head);
@@ -16,14 +17,20 @@ int validDescr(struct pcb *process, int fd);
 
 int di_open(struct pcb *process, int device_no){
     struct FD *fdNew = nextFd(process->FDT);
+    struct devsw *devopenptr;
     if(!fdNew){
         //one file descriptor in FDT currenlty in use for the process;
         return -1;
     }
     fdNew->majorNum = device_no;
     fdNew->status = 1; // 1 marks fd entry as currently open by device
-    fdNew->dvBlock = &deviceTable[device_no];
+    devopenptr = &deviceTable[device_no];
+    fdNew->dvBlock = devopenptr;
     //TODO: need to call the specific device open !!!
+    int result = (devopenptr->dvopen)(devopenptr, device_no);
+    if(!result){
+        return result;
+    }
     return fdNew->index;
 }
 
@@ -72,6 +79,19 @@ int di_read(struct pcb *process, int fd, unsigned char *buff, int size){
         // read error handling specific stuff
     }
     return res;
+
+}
+int di_ioctl(struct pcb *process, int fd, unsigned long command, int val){
+    struct devsw *devioctlptr;
+    int result = validDescr(process, fd);
+    if(!result){
+        //system error-- Not sure if we want to return differently depending on the error
+        //out of range or not an opend device?? 
+        return -1;
+    }
+    devioctlptr = process->FDT[fd].dvBlock;
+    //TODO: fix this return according to how we implement the write
+    return (devioctlptr->dvioctl)(devioctlptr, command, val);
 
 }
 

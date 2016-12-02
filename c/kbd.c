@@ -15,17 +15,18 @@ static int state; /* the modifer key state of the keyboard */
 
 unsigned int kbtoa( unsigned char code );
 int done(int retCode);
-int kb_open(int majorNum);
+int kb_open(const struct devsw* const dvBlock, int majorNum);
 int kb_close(const struct devsw* const dvBlock);
-int kb_ioctl(const struct devsw* const dvBlock);
+int kb_ioctl(const struct devsw* const dvBlock, unsigned long command, int val);
 int kb_write(const struct devsw * const dvBlock);
 int kb_read(const struct devsw * const dvBlock, struct pcb * const process, void *buff, int size);
 int copyCharactersToBuffer(char *outBuf, int outBufSize, int outBufBytesRead, char * inBuf, int inBufSize, int *inBufBytesRead);
 static int extchar(unsigned char code);
 
-int kb_open(int majorNum) {
+int kb_open(const struct devsw* const dvBlock, int majorNum) {
     if (KB_IN_USE) {
         //return failure
+        return -1;
     }
 
     if (!majorNum) {
@@ -42,28 +43,43 @@ int kb_open(int majorNum) {
 }
 
 int kb_write(const struct devsw * const dvBlock) {
-
-
-    return 0;
+    //we can just always return -1 here since we don't write
+    return -1;
 }
 
 int kb_close(const struct devsw* const dvBlock) {
     if (!KB_IN_USE) {
         //return failure
+        return -1;
     }
     if (!dvBlock->dvnum) {
         // closing steps for device one
     }
     if (dvBlock->dvnum == 1) {
+        //clsing steps for device two
 
     }
+    kBytesRead = 0;
     KB_IN_USE = 0;
     return 0;
 }
 
-int kb_ioctl(const struct devsw* const dvBlock) {
-
-    return 0;
+int kb_ioctl(const struct devsw* const dvBlock, unsigned long command, int val) {
+    if(command == 53){
+        //take care of the EOF indicator thing
+        return 0;
+    }
+    else if(command == 56){
+        TOGGLE_ECHO = 1;
+        return 0;
+    }
+    else if(command == 55){
+        TOGGLE_ECHO = 0;
+        return 0;
+    }
+    else{
+        return -1; //error didn't get correct command
+    }
 }
 
 

@@ -130,6 +130,7 @@ void initFDT( struct FD *fd){
     int i;
     for(i = 0; i < FDTSIZE; i++){
         fd[i].index = i;
+        fd[i].status = 0;
         fd[i].majorNum = -1;
     }
 }

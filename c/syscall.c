@@ -204,9 +204,10 @@ int sysread(int fd, void *buff, int bufflen){
 }
 
 int sysioctl(int fd, unsigned long command, ...){
-    //we will perhpas need to have different if statment depedingo in number of parameters we
-    //will support for this call or go back to having a syscall for this syscall that uses valist
-    //for now I will just include call that in uses syscall3 for call with the fd and the command which is the minimum
-    //used for this syscall
-    return syscall3(IOCTL, fd, command);
+        int val = 0;
+        va_list list;
+        va_start(list, 1);
+        val += va_arg(list, int);
+        va_end(list);
+        return syscall4(IOCTL, fd, command, val);
 }

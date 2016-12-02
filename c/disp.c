@@ -186,8 +186,10 @@ void dispatch(void) {
                 }
             case(IOCTL):
                 {
-                    // this can take multiple arguments so we need to figure out how we want to go about our 
-                    // syscall since we are not using va_list anymore
+                    int fd = (int) *(process->args + 1);
+                    unsigned long command = (unsigned long) *(process->args + 2);
+                    int val = (int) *(process->args + 3);
+                    process->rc = di_ioctl(process, fd, command, val);
                     break;
                 }
             case (KEYBOARD):
