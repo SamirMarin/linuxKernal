@@ -3,6 +3,7 @@
 
 #include <xeroskernel.h>
 #include <stdarg.h>
+#include <stdio.h>
 
 /* Your code goes here */
 
