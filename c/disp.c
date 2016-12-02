@@ -168,7 +168,7 @@ void dispatch(void) {
                     process->rc = di_close(process, fd);
                     break;
                 }
-                case(WRITE):
+            case(WRITE):
                 {
                     int fd = (int) *(process->args + 1);
                     void *buff = (void*) *(process->args + 2);
@@ -214,11 +214,10 @@ void cleanup(struct pcb *process) {
     //testCleanup();
     kprintf("PID: %d, RETURNING MEMORY: %d\n", process->pid, process->memoryStart);
     process->pid = -1;
-    process->state = STATE_STOPPED;
+    kfree(process->memoryStart);
     clearWaitingProcesses(&(process->sendQHead), &(process->sendQTail), -1);
     clearWaitingProcesses(&(process->recvQHead), &(process->recvQTail), -1);
     clearWaitingProcesses(&(process->waitQHead), &(process->waitQTail), 0);
-    kfree(process->memoryStart);
     ready(process, &stopQueueHead, &stopQueueTail, STATE_STOPPED);
     //testCleanup();
 }

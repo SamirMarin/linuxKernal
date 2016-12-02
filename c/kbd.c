@@ -19,7 +19,7 @@ int kb_open(int majorNum);
 int kb_close(const struct devsw* const dvBlock);
 int kb_ioctl(const struct devsw* const dvBlock);
 int kb_read(const struct devsw * const dvBlock, struct pcb * const process, void *buff, int size);
-int copyCharactersToBuffer(char *outBuf, int outBufSize, int outBufBytesRead, char * inBuf, int inBufSize, int inBufBytesRead);
+int copyCharactersToBuffer(char *outBuf, int outBufSize, int outBufBytesRead, char * inBuf, int inBufSize, int *inBufBytesRead);
 static int extchar(unsigned char code);
 
 int kb_open(int majorNum) {
@@ -73,11 +73,9 @@ int kb_read(const struct devsw * const dvBlock, struct pcb * p, void *buff, int 
     }
     int bytesRead = 0;
     if (kBytesRead > 0) {
-        copyCharactersToBuffer(buff, size, 0, &kbuf[0], MAX_KBUF_SIZE, kBytesRead);
-
+        bytesRead = copyCharactersToBuffer(buff, size, 0, &kbuf[0], MAX_KBUF_SIZE, &kBytesRead);
     }
     if (bytesRead == size) {
-        p->rc = 0;
         // we're done with this sysread call;
         return 0;
     }
@@ -118,7 +116,6 @@ int kbd_read_in() {
     if (kBytesRead == MAX_KBUF_SIZE) {
         // discard characters because buffer is full
         kprintf("KEYBOARD BUFFER FULL\n");
-        kprintf("BYTES READ: %d\n", kBytesRead);
         return -3;
     }
     unsigned char scanCode = inb(READ_PORT);
@@ -149,7 +146,7 @@ int kbd_read_in() {
         int bytesRead = kbDataRequest.bytesRead;
         int size = kbDataRequest.size;
         // Copy as much from the buffer into the dataRequest
-        bytesRead = copyCharactersToBuffer(buff, size, bytesRead, &kbuf[0], MAX_KBUF_SIZE, kBytesRead);
+        bytesRead = copyCharactersToBuffer(buff, size, bytesRead, &kbuf[0], MAX_KBUF_SIZE, &kBytesRead);
         if (bytesRead == size || character == '\n') {
             kbDataRequest.done(bytesRead);
         }
@@ -157,13 +154,14 @@ int kbd_read_in() {
     return 0;
 }
 
-int copyCharactersToBuffer(char *outBuf, int outBufSize, int outBufBytesRead, char * inBuf, int inBufSize, int inBufBytesRead) {
+int copyCharactersToBuffer(char *outBuf, int outBufSize, int outBufBytesRead, char * inBuf, int inBufSize, int *inBufBytesRead) {
     int bytesCopied = 0;
-    while (outBufBytesRead < outBufSize && bytesCopied < inBufBytesRead) {
-        outBuf[outBufSize] = inBuf[inBufSize - inBufBytesRead];
-        inBufBytesRead--;
+    while (outBufBytesRead < outBufSize && bytesCopied < *inBufBytesRead) {
+        outBuf[outBufSize] = inBuf[bytesCopied];
         outBufBytesRead++;
+        bytesCopied++;
     }
+    *inBufBytesRead -= bytesCopied;
     return outBufBytesRead;
 }
 
