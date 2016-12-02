@@ -4,272 +4,106 @@
 #include <xeroskernel.h>
 #include <xeroslib.h>
 
-void busy( void ) {
-  int myPid;
-  char buff[100];
-  int i;
-  int count = 0;
+#define BUF_MAX 36
+char *username = "cs415\n";
+char *password = "EveryoneGetsAnA";
 
-  myPid = sysgetpid();
-  
-  for (i = 0; i < 10; i++) {
-    sprintf(buff, "My pid is %d and my count in %d\n", myPid, count);
-    sysputs(buff);
-    if (myPid == 2 && count == 1) syskill(3, 31);
-    count++;
-    sysyield();
-  }
+void shell(void);
+void  root(void);
+
+void  root( void ) {
+    int error = 0;
+    char ubuf[BUF_MAX];
+    char pbuf[BUF_MAX];
+
+    while (1) {
+        // Banner
+        sysputs("\nWelcome to Xeros - an experimental OS\n");
+
+        // Open keyboard in non echo mode
+        int fd = sysopen(0);
+        if (fd == -1) {
+            kprintf("Error opening keyboard\n");
+            for(;;);
+        }
+
+        // Turn keyboard echoing on;
+        error = sysioctl(fd, 55);
+        if (error == -1) {
+            kprintf("Error turning keyboard echoing on\n");
+            for(;;);
+        }
+
+        sysputs("Username: ");
+        int bytes = sysread(fd, &ubuf[0], BUF_MAX);
+        if (!bytes) {
+            kprintf("Sysread returned EOF\n");
+            for(;;);
+        }
+        if (bytes == -1) {
+            kprintf("Sysread returned an error\n");
+            for(;;);
+        }
+        ubuf[bytes] = NULLCH;
+        // Turn keyboard echoing off;
+        error = sysioctl(fd, 56);
+        if (error == -1) {
+            kprintf("Error turning keyboard echoing off\n");
+            for(;;);
+        }
+        sysputs("Password: ");
+        bytes = sysread(fd, &pbuf[0], BUF_MAX);
+        if (!bytes) {
+            kprintf("Sysread returned EOF\n");
+            for(;;);
+        }
+        if (bytes == -1) {
+            kprintf("Sysread returned an error\n");
+            for(;;);
+        }
+        pbuf[bytes] = NULLCH;
+        error = sysclose(fd); // Just writing this in for testing even though we dont actually have to close the fd
+        if (error == -1) {
+            kprintf("Error turning closing device\n");
+            for(;;);
+        }
+        if (strcmp(ubuf, username) == 0 && strcmp(pbuf, password) == 0) {
+            break;
+        }
+    }
+
+    int shellPid = create(&shell, 8000);
+    syswait(shellPid);
+
 }
 
-
-
-void sleep1( void ) {
-  int myPid;
-  char buff[100];
-
-  myPid = sysgetpid();
-  sprintf(buff, "Sleeping 1000 is %d\n", myPid);
-  sysputs(buff);
-  syssleep(1000);
-  sprintf(buff, "Awoke 1000 from my nap %d\n", myPid);
-  sysputs(buff);
-}
-
-
-
-void sleep2( void ) {
-  int myPid;
-  char buff[100];
-
-  myPid = sysgetpid();
-  sprintf(buff, "Sleeping 2000 pid is %d\n", myPid);
-  sysputs(buff);
-  syssleep(2000);
-  sprintf(buff, "Awoke 2000 from my nap %d\n", myPid);
-  sysputs(buff);
-}
-
-
-
-void sleep3( void ) {
-  int myPid;
-  char buff[100];
-
-  myPid = sysgetpid();
-  sprintf(buff, "Sleeping 3000 pid is %d\n", myPid);
-  sysputs(buff);
-  syssleep(3000);
-  sprintf(buff, "Awoke 3000 from my nap %d\n", myPid);
-  sysputs(buff);
-}
-
-
-
-
-
-
-
-
-void producer( void ) {
-/****************************/
-
-    int         i;
-    char        buff[100];
-
-
-    // Sping to get some cpu time
-    for(i = 0; i < 100000; i++);
-
-    syssleep(3000);
-    for( i = 0; i < 20; i++ ) {
-      
-      sprintf(buff, "Producer %x and in hex %x %d\n", i+1, i, i+1);
-      sysputs(buff);
-      syssleep(1500);
-
-    }
-    for (i = 0; i < 15; i++) {
-      sysputs("P");
-      syssleep(1500);
-    }
-    sprintf(buff, "Producer finished\n");
-    sysputs( buff );
-    sysstop();
-}
-
-void consumer( void ) {
-/****************************/
-
-    int         i;
-    char        buff[100];
-
-    for(i = 0; i < 50000; i++);
-    syssleep(3000);
-    for( i = 0; i < 10; i++ ) {
-      sprintf(buff, "Consumer %d\n", i);
-      sysputs( buff );
-      syssleep(1500);
-      sysyield();
+void shell(void) {
+    int stdinput[BUF_MAX];
+    // Open keyboard in non echo mode
+    int fd = sysopen(1);
+    if (fd == -1) {
+        kprintf("Error opening keyboard\n");
+        for(;;);
     }
 
-    for (i = 0; i < 40; i++) {
-      sysputs("C");
-      syssleep(700);
-    }
-
-    sprintf(buff, "Consumer finished\n");
-    sysputs( buff );
-    sysstop();
-}
-
-void     root( void ) {
-/****************************/
-
-    char  buff[100];
-    int pids[5];
-    int proc_pid, con_pid;
-    int i;
-
-    int rootPid = sysgetpid();
-    sysputs("Root has been called\n");
-    sprintf(buff, "Root pid is %d\n", rootPid);
-    sysputs(buff);
+    while (1) {
+        sysputs("> ");
+        int bytes = sysread(fd, &stdinput[0], BUF_MAX);
+        if (!bytes) {
+            kprintf("Sysread returned EOF\n");
+            for(;;);
+        }
+        if (bytes == -1) {
+            kprintf("Sysread returned an error\n");
+            for(;;);
+        }
 
 
-    // Test for ready queue removal. 
-   
-    proc_pid = syscreate(&busy, 1024);
-    con_pid = syscreate(&busy, 1024);
-    sysyield();
-    syskill(proc_pid, 31);
-    sysyield();
-    syskill(con_pid, 31);
+        
 
-    
-    for(i = 0; i < 5; i++) {
-      pids[i] = syscreate(&busy, 1024);
-    }
-
-    sysyield();
-    
-    syskill(pids[3], 31);
-    sysyield();
-    syskill(pids[2], 31);
-    syskill(pids[4], 31);
-    sysyield();
-    syskill(pids[0], 31);
-    sysyield();
-    syskill(pids[1], 31);
-    sysyield();
-
-    syssleep(8000);;
-
-
-
-    kprintf("***********Sleeping no kills *****\n");
-    // Now test for sleeping processes
-    pids[0] = syscreate(&sleep1, 1024);
-    pids[1] = syscreate(&sleep2, 1024);
-    pids[2] = syscreate(&sleep3, 1024);
-
-    sysyield();
-    syssleep(8000);;
-
-
-
-    kprintf("***********Sleeping kill 2000 *****\n");
-    // Now test for removing middle sleeping processes
-    pids[0] = syscreate(&sleep1, 1024);
-    pids[1] = syscreate(&sleep2, 1024);
-    pids[2] = syscreate(&sleep3, 1024);
-
-    syssleep(110);
-    syskill(pids[1], 31);
-    syssleep(8000);;
-
-    kprintf("***********Sleeping kill last 3000 *****\n");
-    // Now test for removing last sleeping processes
-    pids[0] = syscreate(&sleep1, 1024);
-    pids[1] = syscreate(&sleep2, 1024);
-    pids[2] = syscreate(&sleep3, 1024);
-
-    sysyield();
-    syskill(pids[2], 31);
-    syssleep(8000);;
-
-    kprintf("***********Sleeping kill first process 1000*****\n");
-    // Now test for first sleeping processes
-    pids[0] = syscreate(&sleep1, 1024);
-    pids[1] = syscreate(&sleep2, 1024);
-    pids[2] = syscreate(&sleep3, 1024);
-
-    syssleep(100);
-    syskill(pids[0], 31);
-    syssleep(8000);;
-
-    // Now test for 1 process
-
-
-    kprintf("***********One sleeping process, killed***\n");
-    pids[0] = syscreate(&sleep2, 1024);
-
-    sysyield();
-    syskill(pids[0], 31);
-    syssleep(8000);;
-
-    kprintf("***********One sleeping process, not killed***\n");
-    pids[0] = syscreate(&sleep2, 1024);
-
-    sysyield();
-    syssleep(8000);;
-
-
-
-    kprintf("***********Three sleeping processes***\n");    // 
-    pids[0] = syscreate(&sleep1, 1024);
-    pids[1] = syscreate(&sleep2, 1024);
-    pids[2] = syscreate(&sleep3, 1024);
-
-
-    // Producer and consumer started too
-    proc_pid = syscreate( &producer, 4096 );
-    con_pid = syscreate( &consumer, 4096 );
-    sprintf(buff, "Proc pid = %d Con pid = %d\n", proc_pid, con_pid);
-    sysputs( buff );
-
-
-    struct processStatuses psTab;
-    int procs;
-    
-
-
-
-    syssleep(500);
-    procs = sysgetcputimes(&psTab);
-
-    for(int j = 0; j <= procs; j++) {
-      sprintf(buff, "%4d    %4d    %10d\n", psTab.pid[j], psTab.status[j], 
-	      psTab.cpuTime[j]);
-      kprintf(buff);
     }
 
 
-    syssleep(10000);
-    procs = sysgetcputimes(&psTab);
 
-    for(int j = 0; j <= procs; j++) {
-      sprintf(buff, "%4d    %4d    %10d\n", psTab.pid[j], psTab.status[j], 
-	      psTab.cpuTime[j]);
-      kprintf(buff);
-    }
-
-    sprintf(buff, "Root finished\n");
-    sysputs( buff );
-    sysstop();
-    
-    for( ;; ) {
-     sysyield();
-    }
-    
 }
 

@@ -7,6 +7,7 @@ static int kBytesRead = 0;
 
 static char TOGGLE_ECHO = 1;
 static char KB_IN_USE = 0;
+static int EOFINDICATOR = 0x4;
 
 // Stores exactly one request for the keyboard
 static struct dataRequest kbDataRequest;
@@ -66,7 +67,7 @@ int kb_close(const struct devsw* const dvBlock) {
 
 int kb_ioctl(const struct devsw* const dvBlock, unsigned long command, int val) {
     if(command == 53){
-        //take care of the EOF indicator thing
+        EOFINDICATOR = val;
         return 0;
     }
     else if(command == 56){
@@ -149,13 +150,6 @@ int kbd_read_in() {
         return -4;
     }
     char character = (char) parsedCharacter;
-    if (state == INCTL && character == 0x4) {
-        kprintf("CTRL-D/EOF DETECTED!!!\n");
-
-        // Disable interrupts
-        //enable_irq(1,1);
-        return EOF;
-    }
     if (TOGGLE_ECHO) {
         kprintf("%c", character);
     }
@@ -172,6 +166,11 @@ int kbd_read_in() {
         bytesRead = copyCharactersToBuffer(buff, size, bytesRead, &kbuf[0], MAX_KBUF_SIZE, &kBytesRead);
         if (bytesRead == size || character == '\n') {
             kbDataRequest.done(bytesRead);
+        } else if (state == INCTL && character == EOFINDICATOR) {
+            kprintf("CTRL-D/EOF DETECTED!!!\n");
+
+        // Disable interrupts
+        //enable_irq(1,1);
         }
     }
     return 0;
