@@ -207,7 +207,7 @@ int sysread(int fd, void *buff, int bufflen){
 int sysioctl(int fd, unsigned long command, ...){
         int val = 0;
         va_list list;
-        va_start(list, 1);
+        va_start(list, command);
         val += va_arg(list, int);
         va_end(list);
         return syscall4(IOCTL, fd, command, val);

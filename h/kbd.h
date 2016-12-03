@@ -65,7 +65,7 @@ struct dataRequest {
     struct dataRequest *next;
     struct dataRequest *prev;
     struct pcb * blockedProc;
-    int (*done)(int retCode);
+    int (*done)(void);
 };
 
 int kb_open(const struct devsw* const dvBlock, int majorNum);

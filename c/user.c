@@ -5,8 +5,8 @@
 #include <xeroslib.h>
 
 #define BUF_MAX 36
-char *username = "cs415";
-char *password = "EveryoneGetsAnA";
+char *username = "cs415\n";
+char *password = "EveryoneGetsAnA\n";
 
 void shell(void);
 void  root(void);
@@ -67,15 +67,18 @@ void  root( void ) {
             kprintf("Error turning closing device\n");
             for(;;);
         }
-        int usercheck = strcmp(&ubuf, username);
-        int passcheck = strcmp(&pbuf, password);
-        kprintf("\n user check %d, pass check %d", usercheck, passcheck);
-        kprintf("\n user in %c, pass in %c", ubuf[8], &pbuf[8]);
+        int usercheck = strcmp(&ubuf[0], username);
+        int passcheck = strcmp(&pbuf[0], password);
+        //kprintf("\n user check %d, pass check %d", usercheck, passcheck);
+        //kprintf("\n user in %s, pass in %s", ubuf, pbuf);
         if (strcmp(ubuf, username) == 0 && strcmp(pbuf, password) == 0) {
             break;
         }
     }
-
+    char buf[100];
+    sprintf(buf, "\n");
+    sysputs(buf);
+    
     int shellPid = create(&shell, 8000);
     syswait(shellPid);
 
@@ -83,7 +86,7 @@ void  root( void ) {
 
 void shell(void) {
     int stdinput[BUF_MAX];
-    // Open keyboard in non echo mode
+    // Open keyboard in echo mode
     int fd = sysopen(1);
     if (fd == -1) {
         kprintf("Error opening keyboard\n");
@@ -101,9 +104,6 @@ void shell(void) {
             kprintf("Sysread returned an error\n");
             for(;;);
         }
-
-
-        
 
     }
 

@@ -169,11 +169,11 @@ struct processStatuses {
 struct devsw{
     int dvnum;
     char *dvname;
-    int (*dvopen)(struct devsw*, int);
-    int (*dvclose)(struct devsw*);
-    int (*dvread)(struct devsw*, struct pcb*, void*, int);
-    int (*dvwrite)(struct devsw*, void*, int);
-    int (*dvioctl)(struct devsw*, unsigned long, int);
+    int (*dvopen)(const struct devsw* const, int);
+    int (*dvclose)(const struct devsw* const);
+    int (*dvread)(const struct devsw* const, struct pcb*, void*, int);
+    int (*dvwrite)(const struct devsw* const, void*, int);
+    int (*dvioctl)(const struct devsw* const, unsigned long, int);
     int *dvcsr;
     int *dvivec;
     int *dvovec;

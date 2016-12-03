@@ -15,7 +15,7 @@ static struct dataRequest kbDataRequest;
 static int state; /* the modifer key state of the keyboard */
 
 unsigned int kbtoa( unsigned char code );
-int done(int retCode);
+int done(void);
 int kb_open(const struct devsw* const dvBlock, int majorNum);
 int kb_close(const struct devsw* const dvBlock);
 int kb_ioctl(const struct devsw* const dvBlock, unsigned long command, int val);
@@ -114,7 +114,7 @@ int kb_read(const struct devsw * const dvBlock, struct pcb * p, void *buff, int 
 }
 
 
-int done() {
+int done(void) {
 
     struct pcb * p =  kbDataRequest.blockedProc;
     p->rc = kbDataRequest.bytesRead;
@@ -134,7 +134,7 @@ int done() {
 int kbd_read_in() {
     unsigned char ctrlByte = inb(CTRL_PORT);
     unsigned char scanCode = inb(READ_PORT);
-    unsigned long parsedCharacter = kbtoa(scanCode);
+    unsigned int character = kbtoa(scanCode);
     if (!(ctrlByte & 1)) {
         // nothing to read, spurious interrupt
         return -2;
@@ -145,11 +145,10 @@ int kbd_read_in() {
         return -3;
     }
 
-    if (parsedCharacter == NOCHAR) {
+    if (character == NOCHAR) {
         // discard uneeded scan codes
         return -4;
     }
-    char character = (char) parsedCharacter;
     if (TOGGLE_ECHO) {
         kprintf("%c", character);
     }
