@@ -7,3 +7,46 @@ respect to how new lines and carriage returns are treated. Line widths
 are to be limited to 80 characters.
 
 
+Took code from scan codes to ASCII.
+
+ Testing showing prioritization of signals, syssighandler and syskill
+    create a root process (process 1). 
+    Set handler that prints "this is signal2" at signal 28 for process.
+    Set handler that prints "this is signal1" at signal 31 for process.
+    create two more process (process 2 and 3)
+    have process 2 
+        do syskill signal 31 to process 1.
+        do syskill signal 28 to process 1.
+    sysyield
+        handler runs and signal 31 should run first then singnal 28
+        test passes:
+            sample output is: signal 1 running
+            sample output is: signal 2 running
+    set handler that prints "this is signal2" at signal 31 for process
+    set handler that prints "this is signal1" at signal 28 using oldhandler from 31.
+
+    created two more process (process 4 and 5)
+        do syskill signal 31 to process 1
+        do syskill signal 28 to process 1 
+            test passes:
+                sample output is: signal 2 running
+                sample output is: signal 1 running
+    
+    this test prioritazation 31 always prints before 28. 
+    test syskill we send singal from process to process
+    test sighandler we use it to set specific signal and use the oldhadler to set also.
+
+
+
+testing sysread and sysioctl:
+    running the shell, we tested sysread by taking input from the keyboard user
+    both echo on and echo off.. buffer from sysread compared agaist buffer made 
+    with the user input and buffers matched exacly.
+    passed.
+
+    ioctl tested by running shell, using it to switch from echo to non echo. Tested 
+    by viewing the output.. no echo no output shown. echo output shown.. passed.
+    also ran shell used ctrl-d.. buffer kept characted prior to ctrl-d and then stopped reading
+    disabaling interrupts. they used sysioctl to change the ctrl-d to x. then did same test
+    as with ctrl-d typing x and inputs read up to x being typed at which point interrpts disabled.
+    passed.
