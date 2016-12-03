@@ -168,7 +168,7 @@ void dispatch(void) {
                     process->rc = di_close(process, fd);
                     break;
                 }
-                case(WRITE):
+            case(WRITE):
                 {
                     int fd = (int) *(process->args + 1);
                     void *buff = (void*) *(process->args + 2);

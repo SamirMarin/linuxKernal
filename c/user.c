@@ -12,116 +12,47 @@ void busy( void ) {
 
   myPid = sysgetpid();
   
-  for (i = 0; i < 10; i++) {
-    sprintf(buff, "My pid is %d and my count in %d\n", myPid, count);
-    sysputs(buff);
-    if (myPid == 2 && count == 1) syskill(3, 31);
-    count++;
-    sysyield();
+  sprintf(buff, "My pid is %d \n", myPid);
+  sysputs(buff);
+  if (myPid == 2 ) {
+      syskill(3, 31);
+      syskill(3, 28);
   }
+  sysyield();
+  if (myPid == 4){
+      syskill(5, 31);
+      syskill(5, 28);
+  }
+  sysyield();
 }
 
-
-
-void sleep1( void ) {
-  int myPid;
-  char buff[100];
-
-  myPid = sysgetpid();
-  sprintf(buff, "Sleeping 1000 is %d\n", myPid);
-  sysputs(buff);
-  syssleep(1000);
-  sprintf(buff, "Awoke 1000 from my nap %d\n", myPid);
-  sysputs(buff);
+void printFunctionTosignal( void ){
+    kprintf("\n you im a signal");
 }
-
-
-
-void sleep2( void ) {
-  int myPid;
-  char buff[100];
-
-  myPid = sysgetpid();
-  sprintf(buff, "Sleeping 2000 pid is %d\n", myPid);
-  sysputs(buff);
-  syssleep(2000);
-  sprintf(buff, "Awoke 2000 from my nap %d\n", myPid);
-  sysputs(buff);
-}
-
-
-
-void sleep3( void ) {
-  int myPid;
-  char buff[100];
-
-  myPid = sysgetpid();
-  sprintf(buff, "Sleeping 3000 pid is %d\n", myPid);
-  sysputs(buff);
-  syssleep(3000);
-  sprintf(buff, "Awoke 3000 from my nap %d\n", myPid);
-  sysputs(buff);
-}
-
-
-
-
-
-
-
-
-void producer( void ) {
-/****************************/
-
-    int         i;
-    char        buff[100];
-
-
-    // Sping to get some cpu time
-    for(i = 0; i < 100000; i++);
-
-    syssleep(3000);
-    for( i = 0; i < 20; i++ ) {
-      
-      sprintf(buff, "Producer %x and in hex %x %d\n", i+1, i, i+1);
-      sysputs(buff);
-      syssleep(1500);
-
+void testsignalpriority( void ){
+    void (*oldhandlerptr) (void*);
+    int result =  syssighandler(28, &sysstop, &oldhandlerptr);
+    if(!result){
+        kprintf("\n error in syshandler");
     }
-    for (i = 0; i < 15; i++) {
-      sysputs("P");
-      syssleep(1500);
+    int result2 = syssighandler(31, &printFunctionTosignal, &oldhandlerptr);
+    if(!result2){
+        kprintf("\n error in syshandler sysgetpid");
     }
-    sprintf(buff, "Producer finished\n");
-    sysputs( buff );
-    sysstop();
+    int proc_pid = syscreate(&busy, 1024);
+    int con_pid = syscreate(&busy, 1024);
+    int result3 = syssighandler(31, &sysstop, &oldhandlerptr);
+    if(!result3){
+        kprintf("\n error in syshandler sysgetpid");
+    }
+    int result4 = syssighandler(28, oldhandlerptr, &oldhandlerptr);
+    if(!result4){
+        kprintf("\n error in syshandler sysgetpid");
+    }
+    int proc_pid2 = syscreate(&busy, 1024);
+    int con_pid2= syscreate(&busy, 1024);
+
 }
-
-void consumer( void ) {
-/****************************/
-
-    int         i;
-    char        buff[100];
-
-    for(i = 0; i < 50000; i++);
-    syssleep(3000);
-    for( i = 0; i < 10; i++ ) {
-      sprintf(buff, "Consumer %d\n", i);
-      sysputs( buff );
-      syssleep(1500);
-      sysyield();
-    }
-
-    for (i = 0; i < 40; i++) {
-      sysputs("C");
-      syssleep(700);
-    }
-
-    sprintf(buff, "Consumer finished\n");
-    sysputs( buff );
-    sysstop();
-}
-
 void     root( void ) {
 /****************************/
 
@@ -135,9 +66,11 @@ void     root( void ) {
     sprintf(buff, "Root pid is %d\n", rootPid);
     sysputs(buff);
 
+    testsignalpriority();
+    kprintf("\n done with root");
 
     // Test for ready queue removal. 
-   
+  /* 
     proc_pid = syscreate(&busy, 1024);
     con_pid = syscreate(&busy, 1024);
     sysyield();
@@ -269,7 +202,7 @@ void     root( void ) {
     
     for( ;; ) {
      sysyield();
-    }
+    }*/
     
 }
 
