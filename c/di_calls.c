@@ -19,16 +19,14 @@ int di_open(struct pcb *process, int device_no){
     struct FD *fdNew = nextFd(process->FDT);
     struct devsw *devopenptr;
     if(!fdNew){
-        //one file descriptor in FDT currenlty in use for the process;
         return -1;
     }
     fdNew->majorNum = device_no;
     fdNew->status = 1; // 1 marks fd entry as currently open by device
     devopenptr = &deviceTable[device_no];
     fdNew->dvBlock = devopenptr;
-    //TODO: need to call the specific device open !!!
     int result = (devopenptr->dvopen)(devopenptr, device_no);
-    if(!result){
+    if(result){
         return result;
     }
     return fdNew->index;
@@ -38,65 +36,42 @@ int di_close(struct pcb *process, int fd){
     struct devsw *devcloseptr;
     int result = validDescr(process, fd);
     if(!result){
-        //system error-- Not sure if we want to return differently depending on the error
-        //out of range or not an opend device?? 
         return -1;
     }
     devcloseptr = process->FDT[fd].dvBlock;
     process->FDT[fd].status = 0;
     process->FDT[fd].majorNum = -1;
-    //here we need to call the our implimentation in devsw block
-    //TODO: make appropriate call with appropriate parameters
     return (devcloseptr->dvclose)(devcloseptr);
-
 }
 
 int di_write(struct pcb *process, int fd, unsigned char *buff, int size){
     struct devsw *devwriteptr;
     int result = validDescr(process, fd);
-    if(!result){
-        //system error-- Not sure if we want to return differently depending on the error
-        //out of range or not an opend device?? 
+    if(!result || !buff || !size){
         return -1;
     }
     devwriteptr = process->FDT[fd].dvBlock;
-    //TODO: fix this return according to how we implement the write
     return (devwriteptr->dvwrite)(devwriteptr, buff, size);
-
 }
 
 int di_read(struct pcb *process, int fd, unsigned char *buff, int size){
     struct devsw *devreadptr;
     int result = validDescr(process, fd);
-    if(!result){
-        //system error-- Not sure if we want to return differently depending on the error
-        //out of range or not an opend device?? 
+    if(!result || !buff || !size){
         return -1;
     }
     devreadptr = process->FDT[fd].dvBlock;
-    int res = (devreadptr->dvread)(devreadptr, process, buff, size);
-    if (!res) {
-        // read error handling specific stuff
-    }
-    return res;
-
+    return (devreadptr->dvread)(devreadptr, process, buff, size);
 }
 int di_ioctl(struct pcb *process, int fd, unsigned long command, int val){
     struct devsw *devioctlptr;
     int result = validDescr(process, fd);
     if(!result){
-        //system error-- Not sure if we want to return differently depending on the error
-        //out of range or not an opend device?? 
         return -1;
     }
     devioctlptr = process->FDT[fd].dvBlock;
-    //TODO: fix this return according to how we implement the write
     return (devioctlptr->dvioctl)(devioctlptr, command, val);
-
 }
-
-
-    
 
 /* 
  * ===  FUNCTION  ======================================================================

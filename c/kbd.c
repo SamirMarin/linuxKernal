@@ -8,6 +8,7 @@ static int kBytesRead = 0;
 static char TOGGLE_ECHO = 1;
 static char KB_IN_USE = 0;
 static int EOFINDICATOR = 0x4;
+static int EOFFLAG = 0;
 
 // Stores exactly one request for the keyboard
 static struct dataRequest kbDataRequest;
@@ -29,17 +30,19 @@ int kb_open(const struct devsw* const dvBlock, int majorNum) {
         //return failure
         return -1;
     }
-
     if (!majorNum) {
         // Make sure echo is turned off
         TOGGLE_ECHO = 0;
     }
     if (majorNum) {
+        // Make sure echo is turned off
         TOGGLE_ECHO = 1;
     }
-    // Getting a compiler warning for this one
+    kBytesRead = 0;
     KB_IN_USE = 1;
-    //enable_irq(1,0);
+    EOFINDICATOR = 0x4;//standard EOF
+    EOFFLAG = 0;
+    enable_irq(1,0);
     return 0;
 }
 
@@ -58,7 +61,6 @@ int kb_close(const struct devsw* const dvBlock) {
     }
     if (dvBlock->dvnum == 1) {
         //clsing steps for device two
-
     }
     kBytesRead = 0;
     KB_IN_USE = 0;
@@ -83,17 +85,12 @@ int kb_ioctl(const struct devsw* const dvBlock, unsigned long command, int val) 
     }
 }
 
-
 int kb_read(const struct devsw * const dvBlock, struct pcb * p, void *buff, int size) {
     if (!p) {
         return -1;
     } 
-    if (dvBlock->dvnum) {
-        // device 1 specific stuff
-    }
-    if (!dvBlock->dvnum) {
-        // device 0 specific stuff
-
+    if (EOFFLAG) {
+        return 0;
     }
     int bytesRead = 0;
     if (kBytesRead > 0) {
@@ -101,7 +98,7 @@ int kb_read(const struct devsw * const dvBlock, struct pcb * p, void *buff, int 
     }
     if (bytesRead == size) {
         // we're done with this sysread call;
-        return 0;
+        return bytesRead;
     }
     kbDataRequest.status = 1;
     kbDataRequest.buff = buff;
@@ -113,9 +110,7 @@ int kb_read(const struct devsw * const dvBlock, struct pcb * p, void *buff, int 
     return 0;
 }
 
-
 int done(void) {
-
     struct pcb * p =  kbDataRequest.blockedProc;
     p->rc = kbDataRequest.bytesRead;
     ready(p, &readyQueueHead, &readyQueueTail, STATE_READY);
@@ -164,13 +159,8 @@ int kbd_read_in() {
         // Copy as much from the buffer into the dataRequest
         bytesRead = copyCharactersToBuffer(buff, size, bytesRead, &kbuf[0], MAX_KBUF_SIZE, &kBytesRead);
         kbDataRequest.bytesRead = bytesRead;
-        if (bytesRead == size || character == '\n') {
+        if (bytesRead == size || character == '\n'|| character == EOFINDICATOR) {
             kbDataRequest.done();
-        } else if (state == INCTL && character == EOFINDICATOR) {
-            kprintf("CTRL-D/EOF DETECTED!!!\n");
-
-        // Disable interrupts
-        //enable_irq(1,1);
         }
     }
     return 0;
@@ -179,6 +169,11 @@ int kbd_read_in() {
 int copyCharactersToBuffer(char *outBuf, int outBufSize, int outBufBytesRead, char * inBuf, int inBufSize, int *inBufBytesRead) {
     int bytesCopied = 0;
     while (outBufBytesRead < outBufSize && bytesCopied < *inBufBytesRead) {
+        if(inBuf[bytesCopied] == EOFINDICATOR){
+            enable_irq(1,1);
+            EOFFLAG = 1;
+            break;
+        }
         outBuf[outBufBytesRead] = inBuf[bytesCopied];
         outBufBytesRead++;
         bytesCopied++;

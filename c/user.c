@@ -21,7 +21,7 @@ void  root(void);
 void psf(void);
 void exf(void);
 void kf(int pid);
-void alarmHandler(void);
+void alarmHandler(void *cntx);
 void alarm(void);
 void t(void);
 int parseString(char *inBuf, int inBufSize, char *outBuf, int outBufSize);
@@ -193,7 +193,7 @@ void psf(void) {
 }
 void kf(int pid) {}
 
-void alarmHandler(void) {
+void alarmHandler(void *cntx) {
     char buf[100];
     sprintf(buf, "ALARM ALARM ALARM\n");
     sysputs(buf);
