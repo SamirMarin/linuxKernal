@@ -172,7 +172,7 @@ struct devsw{
     int (*dvopen)(const struct devsw* const, int);
     int (*dvclose)(const struct devsw* const);
     int (*dvread)(const struct devsw* const, struct pcb*, void*, int);
-    int (*dvwrite)(const struct devsw* const, void*, int);
+    int (*dvwrite)(const struct devsw* const);
     int (*dvioctl)(const struct devsw* const, unsigned long, int);
     int *dvcsr;
     int *dvivec;

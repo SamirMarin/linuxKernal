@@ -51,7 +51,7 @@ int di_write(struct pcb *process, int fd, unsigned char *buff, int size){
         return -1;
     }
     devwriteptr = process->FDT[fd].dvBlock;
-    return (devwriteptr->dvwrite)(devwriteptr, buff, size);
+    return (devwriteptr->dvwrite)(devwriteptr);
 }
 
 int di_read(struct pcb *process, int fd, unsigned char *buff, int size){
