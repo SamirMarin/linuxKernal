@@ -4,12 +4,13 @@
 #include <xeroskernel.h>
 #include <xeroslib.h>
 
-#define BUF_MAX 36
+#define BUF_MAX 100
 char *username = "cs415\n";
 char *password = "EveryoneGetsAnA\n";
 
 void shell(void);
 void  root(void);
+int parseString(char *inBuf, int inBufSize, char *outBuf, int outBufSize);
 
 void  root( void ) {
     int error = 0;
@@ -75,17 +76,19 @@ void  root( void ) {
             break;
         }
     }
-    char buf[100];
+    char buf[BUF_MAX];
     sprintf(buf, "\n");
     sysputs(buf);
     
     int shellPid = create(&shell, 8000);
-    syswait(shellPid);
+    int retCode = syswait(shellPid);
+    sprintf(buf, "Syswait retcode%d\n", retCode);
+    sysputs(buf);
 
 }
 
 void shell(void) {
-    int stdinput[BUF_MAX];
+    char stdinput[BUF_MAX];
     // Open keyboard in echo mode
     int fd = sysopen(1);
     if (fd == -1) {
@@ -104,10 +107,36 @@ void shell(void) {
             kprintf("Sysread returned an error\n");
             for(;;);
         }
-
+        if (bytes == BUF_MAX) {
+            bytes = BUF_MAX - 1;
+        }
+        stdinput[bytes] = NULLCH;
+        char parsedWord[bytes];
+        int bytesParsed = parseString(stdinput, bytes, parsedWord, bytes);
+        if (bytesParsed == -2) {
+            // GO back to the the beginning of the loop
+            sysputs("Ignoring command");
+            continue;
+        }
+        parsedWord[bytesParsed] = NULLCH;
+        sysputs(parsedWord);
     }
+}
 
-
-
+int parseString(char *inBuf, int inBufSize, char *outBuf, int outBufSize) {
+        int bytesRead = 0;
+        char * endInBuf = inBuf + inBufSize;
+        char * endOutBuf = outBuf + outBufSize;
+        while (inBuf < endInBuf && *inBuf == ' ') {
+            inBuf++;
+        }
+        while (inBuf < endInBuf && *inBuf != ' ' && outBuf < endOutBuf ) {
+            *outBuf++ = *inBuf++;
+            bytesRead++;
+        }
+        if (inBuf[1] == '&'){
+            return -2;
+        }
+        return bytesRead;
 }
 
