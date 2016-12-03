@@ -16,6 +16,9 @@ struct FD* nextFd(struct FD *head);
 int validDescr(struct pcb *process, int fd);
 
 int di_open(struct pcb *process, int device_no){
+    if(device_no >= DEVICETABLESIZE){
+        return -1;
+    }
     struct FD *fdNew = nextFd(process->FDT);
     struct devsw *devopenptr;
     if(!fdNew){

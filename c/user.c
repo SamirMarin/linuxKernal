@@ -12,6 +12,11 @@ char *excom = "ex";
 char *kcom = "k";
 char *acom = "a";
 char *tcom = "t";
+char *psand = "ps&";
+char *exand = "ex&";
+char *kand = "k&";
+char *aand = "a&";
+char *tand = "t&";
 int shellPid;
 int alarmTicks;
 
@@ -114,15 +119,11 @@ void shell(void) {
         sysputs("> ");
         int bytes = sysread(fd, &stdinput[0], BUF_MAX - 1);
         if (!bytes) {
-            kprintf("HIT HERE");
             break;
         }
         if (bytes == -1) {
             kprintf("Sysread returned an error\n");
             for(;;);
-        }
-        if (bytes == -362) {
-            continue;
         }
         stdinput[bytes++] = NULLCH;
         char command[bytes];
@@ -133,18 +134,23 @@ void shell(void) {
             continue;
         }
         command[bytesParsed++] = NULLCH;
-        if (strcmp(command, pscom) == 0) {
+        if (!strcmp(command, pscom) || !strcmp(command, psand)) {
                 psf();
-        } else if (strcmp(command, excom) == 0) {
+        } else if (!strcmp(command, excom) || !strcmp(command, exand)) {
             break;
-        } else if (strcmp(command, kcom) == 0) {
+        } else if (!strcmp(command, kcom) || !strcmp(command, kand)) {
             if (bytesParsed < BUF_MAX) {
                 char arg[BUF_MAX];
                 bytesParsed += parseString(&stdinput[bytesParsed], BUF_MAX - bytesParsed, arg, BUF_MAX);
                 arg[bytesParsed++] = NULLCH;
                 int pid = atoi(arg);
+                int res = syskill(pid, 9);
+                if (res == -712) {
+                    sprintf(arg, "No such process\n");
+                    sysputs(arg);
+                }
             }
-        } else if (strcmp(command, acom) == 0) {
+        } else if (!strcmp(command, acom) || !strcmp(command, aand)) {
             if (bytesParsed < BUF_MAX) {
                 char arg[BUF_MAX];
                 bytesParsed += parseString(&stdinput[bytesParsed], BUF_MAX - bytesParsed, arg, BUF_MAX);
@@ -152,14 +158,19 @@ void shell(void) {
                 int ticks = atoi(arg);
                 alarmTicks = ticks;
                 syssighandler(15, &alarmHandler, NULL);
-                syscreate(&alarm, 8000);
+                int alarmPid = syscreate(&alarm, 8000);
+                if (!strcmp(command, acom)) {
+                    syswait(alarmPid);
+                }
             }
-        } else if (strcmp(command, tcom) == 0) {
-            syscreate(&t, 8000);
+        } else if (!strcmp(command, tcom) || !strcmp(command, tand)) {
+            int tpid = syscreate(&t, 8000);
+            if (!strcmp(command, tcom)) {
+                syswait(tpid);
+            }
         } else {
             sysputs("Command not found\n");
         }
-        sysputs(command);
     }
     sysputs("Exiting shell...\n");
 }
@@ -177,9 +188,6 @@ int parseString(char *inBuf, int inBufSize, char *outBuf, int outBufSize) {
             inBuf++;
             bytesRead++;
         }
-        if (inBuf[1] == '&'){
-            return -2;
-        }
         return bytesRead;
 }
 
@@ -189,7 +197,7 @@ void psf(void) {
     char buf[100];
     sprintf(buf, "%4s    %4s    %10s\n", "Pid", "Status", "CpuTime");
     sysputs(buf);
-    for (int i = 0; i < procs; i++) {
+    for (int i = 0; i <= procs; i++) {
         int status = ps.status[i];
         switch(status) {
         case STATE_STOPPED:
@@ -231,12 +239,14 @@ void alarmHandler(void *cntx) {
 
 void alarm(void) {
     int sleepTime = alarmTicks * TICKLENGTH;
+    syssighandler(9, &sysstop, NULL);
     syssleep(sleepTime);
-    signal(shellPid, 15); 
+    syskill(shellPid, 15); 
 }
 
 void t(void) {
     char buf[5];
+    syssighandler(9, &sysstop, NULL);
     sprintf(buf, "T\n");
     for (;;) {
         syssleep(10000);
