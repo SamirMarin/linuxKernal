@@ -37,6 +37,7 @@ unsigned int sleep(unsigned int ms, struct pcb * process){
  */
 void tick(void){
     if (sleepQueueHead) {
+        //kprintf("SleepQueueHead->tick: %d\n", sleepQueueHead->tick);
         sleepQueueHead->tick -= 1;
     }
     while (sleepQueueHead && sleepQueueHead->tick <= 0) {

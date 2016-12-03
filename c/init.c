@@ -67,7 +67,7 @@ void initproc( void )				/* The beginning */
     kprintf("\n");
     kmeminit();
     contextinit();
-    //initPIT(TIMESLICE);
+    initPIT(TIMESLICE);
     pcbTable = (struct pcb*) kmalloc(PCBTABLESIZE*sizeof(struct pcb));
     if (!pcbTable) {
         kprintf("\n\nCould not allocate memory for pcbtable. File: init.c. Function: initproc()");

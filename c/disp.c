@@ -181,7 +181,7 @@ void dispatch(void) {
                     int fd = (int) *(process->args + 1);
                     void *buff = (void*) *(process->args + 2);
                     int bufflen = (int) *(process->args + 3);
-                    process->rc = di_read(process, fd, buff, bufflen);
+                    di_read(process, fd, buff, bufflen);
                     process = next(&readyQueueHead, &readyQueueTail);
                     break;
                 }

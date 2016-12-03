@@ -96,15 +96,16 @@ int kb_read(const struct devsw * const dvBlock, struct pcb * p, void *buff, int 
     if (kBytesRead > 0) {
         bytesRead = copyCharactersToBuffer(buff, size, 0, &kbuf[0], MAX_KBUF_SIZE, &kBytesRead);
     }
-    if (bytesRead == size) {
-        // we're done with this sysread call;
-        return bytesRead;
-    }
     kbDataRequest.status = 1;
     kbDataRequest.buff = buff;
     kbDataRequest.size = size;
     kbDataRequest.bytesRead = bytesRead;
     kbDataRequest.done = &done;
+    if (bytesRead == size) {
+        // we're done with this sysread call;
+        done();
+        return 0;
+    }
     kbDataRequest.blockedProc = p;
     p->state = STATE_DEV_WAITING;
     return 0;
