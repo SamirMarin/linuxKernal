@@ -114,4 +114,6 @@ struct segtr {
 /* Some helpful prototypes */
 void initPIT( int divisor );
 void end_of_intr( void );
+void enable_irq( unsigned int,  int);
+
 

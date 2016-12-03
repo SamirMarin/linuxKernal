@@ -23,7 +23,7 @@ unsigned int sleep(unsigned int ms, struct pcb * process){
         ready(process, &readyQueueHead, &readyQueueTail, STATE_READY);
         return 0;
     }
-    unsigned int tick = ms/TICKLENGTH + (ms%TICKLENGTH ? 1 : 0);
+    unsigned int tick = ms/TICKLENGTH + 1;
     process->state = STATE_SLEEP;
     insertIntoSleepQ(process, tick); 
     return 1;

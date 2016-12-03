@@ -47,6 +47,7 @@ void           set_evec(unsigned int xnum, unsigned long handler);
 #define SIGNALMAX 31
 #define DEVICETABLESIZE 2
 #define FDTSIZE 4
+
 //constants to track state that a process is in
 #define STATE_STOPPED 0
 #define STATE_READY 1
@@ -55,6 +56,7 @@ void           set_evec(unsigned int xnum, unsigned long handler);
 #define STATE_RECV 29
 #define STATE_SEND 34 
 #define STATE_WAITING 47
+#define STATE_DEV_WAITING 92
 
 //Time slice constant
 #define TIMESLICE 100 // must change both these values. one is dependent on the other
@@ -154,7 +156,8 @@ enum SystemEvents {
     CLOSE,
     WRITE,
     READ,
-    IOCTL
+    IOCTL,
+    KEYBOARD
 };
 
 struct processStatuses {
@@ -166,27 +169,23 @@ struct processStatuses {
 struct devsw{
     int dvnum;
     char *dvname;
-    int (*dvinit)(void);
-    int (*dvopen)(void);
-    int (*dvclose)(struct devsw*);
-    int (*dvread)(void);
-    int (*dvwrite)(struct devsw*, void*, int);
-    int (*dvseek)(void);
-    int (*dvgetc)(void);
-    int (*dvputc)(void);
-    int (*dvcntl)(void);
+    int (*dvopen)(const struct devsw* const, int);
+    int (*dvclose)(const struct devsw* const);
+    int (*dvread)(const struct devsw* const, struct pcb*, void*, int);
+    int (*dvwrite)(const struct devsw* const);
+    int (*dvioctl)(const struct devsw* const, unsigned long, int);
     int *dvcsr;
     int *dvivec;
     int *dvovec;
     int (*dviint)(void);
     int (*dvoint)(void);
-    int *dvioblk;
-    int dvminor;
 };
+// di_calls.c functions
 extern int di_open(struct pcb *process, int device_no);
 extern int di_close(struct pcb *process, int fd);
 extern int di_write(struct pcb *process, int fd, unsigned char *buff, int size);
 extern int di_read(struct pcb *process, int fd, unsigned char *buff, int size);
+extern int di_ioctl(struct pcb *process, int fd, unsigned long command, int val);
 
 // ctsw.c functions
 extern int contextswitch(struct pcb* process);
@@ -207,8 +206,14 @@ extern int syssend(int dest_pid, unsigned long num);
 extern int sysrecv(unsigned int *from_pid, unsigned long *num);
 extern int syssleep( unsigned int milliseconds );
 extern int sysgetcputimes(struct processStatuses *ps);
-extern int syssighandler(int signal, void(*newHandler)(void*), void(**oldHandler)(void*)) ;
+extern int syssighandler(int signal, void(*newHandler)(void*), void(**oldHandler)(void*));
 extern int syssigreturn(void *old_sp);
+extern int syswait(int pid);
+extern int sysopen(int device_no);
+extern int sysclose(int fd);
+extern int syswrite(int fd, void *buff, int bufflen);
+extern int sysread(int fd, void *buff, int bufflen);
+extern int sysioctl(int fd, unsigned long command, ...);
 // user.c 
 extern void root(void);
 // msg.c
@@ -220,6 +225,13 @@ extern void tick(void);
 // signal.c
 extern int signal(int pid, int sig_no);
 extern void sigtramp(void (*handler)(void*), void *cntx);
+// kbd.c
+int kbd_read_in(void);
+int kb_open(const struct devsw* const dvBlock, int majorNum);
+int kb_close(const struct devsw* const dvBlock);
+int kb_ioctl(const struct devsw* const dvBlock, unsigned long command, int val);
+int kb_read(const struct devsw * const dvBlock, struct pcb * const process, void *buff, int size);
+int kb_write(const struct devsw * const dvBlock);
 
 
 

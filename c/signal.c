@@ -21,16 +21,21 @@ int signal(int pid, int sig_no) {
 
     int state = process->state;
     if (state == STATE_WAITING) {
+        removeNthPCB(process);
+        ready(process, &readyQueueHead, &readyQueueTail, STATE_READY);
         process->rc = -2;
     }
-    if (state == STATE_RECV || state == STATE_SEND || state == STATE_SLEEP) {
+    if (state == STATE_RECV || state == STATE_SEND || state == STATE_SLEEP)  {
+        removeNthPCB(process);
+        ready(process, &readyQueueHead, &readyQueueTail, STATE_READY);
+        process->rc  = -362;
+    }
+    if (state == STATE_DEV_WAITING) { 
         process->rc  = -362;
     }
     unsigned long originalMask = process->signalBitMask;
     unsigned long one = 1;
     process->signalBitMask = originalMask | (one << sig_no);
-    removeNthPCB(process);
-    ready(process, &readyQueueHead, &readyQueueTail, STATE_READY);
     return 0;
 }
 

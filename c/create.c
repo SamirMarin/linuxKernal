@@ -33,7 +33,7 @@ int create(void (*func)(void), int stackSize) {
     ready(process, &readyQueueHead, &readyQueueTail, STATE_READY);
     return process->pid;
 }
-
+//TODO
 //TODO: remove function I don't think we need it anymore we can call idle first and use index starting from zero this way
 //idle will always be assigned a zero.
 int createIdle(void (*func)(void), int stackSize) {
@@ -130,6 +130,7 @@ void initFDT( struct FD *fd){
     int i;
     for(i = 0; i < FDTSIZE; i++){
         fd[i].index = i;
+        fd[i].status = 0;
         fd[i].majorNum = -1;
     }
 }
