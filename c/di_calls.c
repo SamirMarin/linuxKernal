@@ -41,7 +41,9 @@ int di_close(struct pcb *process, int fd){
     devcloseptr = process->FDT[fd].dvBlock;
     process->FDT[fd].status = 0;
     process->FDT[fd].majorNum = -1;
-    return (devcloseptr->dvclose)(devcloseptr);
+    int res = (devcloseptr->dvclose)(devcloseptr);
+    process->FDT[fd].dvBlock = NULL;
+    return res;
 }
 
 int di_write(struct pcb *process, int fd, unsigned char *buff, int size){

@@ -215,8 +215,15 @@ void dispatch(void) {
  */
 void cleanup(struct pcb *process) {
     //testCleanup();
-    kprintf("PID: %d, RETURNING MEMORY: %d\n", process->pid, process->memoryStart);
+    //kprintf("PID: %d, RETURNING MEMORY: %d\n", process->pid, process->memoryStart);
     process->pid = -1;
+    int i;
+    for(i = 0; i < FDTSIZE; i++){
+        int mN = process->FDT[i].majorNum;
+        if (mN > -1) {
+            di_close(process, i);
+        } 
+    }
     kfree(process->memoryStart);
     clearWaitingProcesses(&(process->sendQHead), &(process->sendQTail), -1);
     clearWaitingProcesses(&(process->recvQHead), &(process->recvQTail), -1);

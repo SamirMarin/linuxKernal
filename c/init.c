@@ -81,7 +81,6 @@ void initproc( void )				/* The beginning */
     }
     initDeviceTable();
 
-    enable_irq(1,0);
 
     create(&idleproc, 8000);
     create(&root, 8000);

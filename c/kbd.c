@@ -149,7 +149,7 @@ int kbd_read_in() {
     }
     // Put it in the buffer
     if (kBytesRead < MAX_KBUF_SIZE) {
-        kbuf[kBytesRead] = character;
+        kbuf[kBytesRead] = (unsigned char) character;
         kBytesRead++;
     }
     if (kbDataRequest.status) {
@@ -202,7 +202,6 @@ unsigned int kbtoa( unsigned char code )
                 state &= ~INSHIFT;
                 break;
             case CAPSL:
-                kprintf("Capslock off detected\n");
                 state &= ~CAPSLOCK;
                 break;
             case LCTL:
@@ -226,11 +225,9 @@ unsigned int kbtoa( unsigned char code )
             return NOCHAR;
         case CAPSL:
             state |= CAPSLOCK;
-            kprintf("Capslock ON detected!\n");
             return NOCHAR;
         case LCTL:
             state |= INCTL;
-            kprintf("CTRL detected!\n");
             return NOCHAR;
         case LMETA:
             state |= INMETA;

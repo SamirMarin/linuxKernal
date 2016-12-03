@@ -6,12 +6,12 @@
 
 #define BUF_MAX 100
 char *username = "cs415\n";
-char *password = "EveryoneGetsAnA\n";
-char *pscom = "ps\n";
-char *excom = "ex\n";
-char *kcom = "k\n";
-char *acom = "a\n";
-char *tcom = "t\n";
+char *password = "a\n";
+char *pscom = "ps";
+char *excom = "ex";
+char *kcom = "k";
+char *acom = "a";
+char *tcom = "t";
 int shellPid;
 int alarmTicks;
 
@@ -114,53 +114,52 @@ void shell(void) {
         sysputs("> ");
         int bytes = sysread(fd, &stdinput[0], BUF_MAX - 1);
         if (!bytes) {
+            kprintf("HIT HERE");
             break;
         }
         if (bytes == -1) {
             kprintf("Sysread returned an error\n");
             for(;;);
         }
-        stdinput[bytes] = NULLCH;
-        char parsedWord[bytes];
-        int bytesParsed = parseString(stdinput, bytes, parsedWord, bytes);
+        if (bytes == -362) {
+            continue;
+        }
+        stdinput[bytes++] = NULLCH;
+        char command[bytes];
+        int bytesParsed = parseString(stdinput, bytes, command, bytes);
         if (bytesParsed == -2) {
             // GO back to the the beginning of the loop
             sysputs("Ignoring command");
             continue;
         }
-        parsedWord[bytesParsed] = NULLCH;
-        if (strcmp(parsedWord, pscom) == 0) {
+        command[bytesParsed++] = NULLCH;
+        if (strcmp(command, pscom) == 0) {
                 psf();
-
-        } else if (strcmp(parsedWord, excom) == 0) {
+        } else if (strcmp(command, excom) == 0) {
             break;
-
-        } else if (strcmp(parsedWord, kcom) == 0) {
-            if (bytes < BUF_MAX) {
+        } else if (strcmp(command, kcom) == 0) {
+            if (bytesParsed < BUF_MAX) {
                 char arg[BUF_MAX];
-                int bytesParsed = parseString(&stdinput[bytes], BUF_MAX, arg, BUF_MAX);
-                arg[bytesParsed] = NULLCH;
+                bytesParsed += parseString(&stdinput[bytesParsed], BUF_MAX - bytesParsed, arg, BUF_MAX);
+                arg[bytesParsed++] = NULLCH;
                 int pid = atoi(arg);
-                kprintf("PID: %d\n", pid);
             }
-        } else if (strcmp(parsedWord, acom) == 0) {
-            if (bytes < BUF_MAX) {
+        } else if (strcmp(command, acom) == 0) {
+            if (bytesParsed < BUF_MAX) {
                 char arg[BUF_MAX];
-                int bytesParsed = parseString(&stdinput[bytes], BUF_MAX, arg, BUF_MAX);
+                bytesParsed += parseString(&stdinput[bytesParsed], BUF_MAX - bytesParsed, arg, BUF_MAX);
+                arg[bytesParsed++] = NULLCH;
                 int ticks = atoi(arg);
-                arg[bytesParsed] = NULLCH;
-                kprintf("TICKS: %d\n", ticks);
                 alarmTicks = ticks;
                 syssighandler(15, &alarmHandler, NULL);
                 syscreate(&alarm, 8000);
             }
-
-        } else if (strcmp(parsedWord, tcom) == 0) {
+        } else if (strcmp(command, tcom) == 0) {
             syscreate(&t, 8000);
         } else {
             sysputs("Command not found\n");
         }
-        sysputs(parsedWord);
+        sysputs(command);
     }
     sysputs("Exiting shell...\n");
 }
@@ -169,11 +168,13 @@ int parseString(char *inBuf, int inBufSize, char *outBuf, int outBufSize) {
         int bytesRead = 0;
         char * endInBuf = inBuf + inBufSize;
         char * endOutBuf = outBuf + outBufSize;
-        while (inBuf < endInBuf && (*inBuf == ' ' || *inBuf == NULLCH)) {
+        while (inBuf < endInBuf && *inBuf == ' ') {
             inBuf++;
         }
-        while (inBuf < endInBuf && *inBuf != ' ' && outBuf < endOutBuf ) {
-            *outBuf++ = *inBuf++;
+        while (inBuf < endInBuf && *inBuf != ' ' && *inBuf != '\n' && outBuf < endOutBuf ) {
+            *outBuf = *inBuf;
+            outBuf++;
+            inBuf++;
             bytesRead++;
         }
         if (inBuf[1] == '&'){
@@ -187,8 +188,36 @@ void psf(void) {
     int procs =  sysgetcputimes(&ps);
     char buf[100];
     sprintf(buf, "%4s    %4s    %10s\n", "Pid", "Status", "CpuTime");
+    sysputs(buf);
     for (int i = 0; i < procs; i++) {
-        sprintf(buf, "%4d    %4d    %10d\n", ps.pid[i], ps.status[i], ps.cpuTime[i]);
+        int status = ps.status[i];
+        switch(status) {
+        case STATE_STOPPED:
+            sprintf(buf, "%4d    %4s    %10d\n", ps.pid[i], "STOPPED", ps.cpuTime[i]);
+            break;
+        case STATE_READY:
+            sprintf(buf, "%4d    %4s    %10d\n", ps.pid[i], "READY", ps.cpuTime[i]);
+            break;
+        case STATE_SLEEP:
+            sprintf(buf, "%4d    %4s    %10d\n", ps.pid[i], "SLEEP", ps.cpuTime[i]);
+            break;
+        case STATE_RUNNING:
+            sprintf(buf, "%4d    %4s    %10d\n", ps.pid[i], "RUNNING", ps.cpuTime[i]);
+            break;
+        case STATE_RECV:
+            sprintf(buf, "%4d    %4s    %10d\n", ps.pid[i], "RECV", ps.cpuTime[i]);
+            break;
+        case STATE_SEND:
+            sprintf(buf, "%4d    %4s    %10d\n", ps.pid[i], "SENDING", ps.cpuTime[i]);
+            break;
+        case STATE_WAITING:
+            sprintf(buf, "%4d    %4s    %10d\n", ps.pid[i], "WAITING", ps.cpuTime[i]);
+            break;
+        case STATE_DEV_WAITING:
+            sprintf(buf, "%4d    %4s    %10d\n", ps.pid[i], "DEV_WAITING", ps.cpuTime[i]);
+            break;
+        }
+        sysputs(buf);
     }
 }
 void kf(int pid) {}
