@@ -9,36 +9,66 @@ are to be limited to 80 characters.
 
 Took code from scan codes to ASCII.
 
- Testing showing prioritization of signals, syssighandler and syskill
+ Testing 
+ 1. Showing prioritization of signals 
+ 2. syssighandler 
+ 3. syskill
     create a root process (process 1). 
-    Set handler that prints "this is signal2" at signal 28 for process.
-    Set handler that prints "this is signal1" at signal 31 for process.
+    Set handler that prints "signal 2 is running" at signal 28 for process 1.
+    Set handler that prints "signal 1 is running" at signal 31 for process 1.
     create two more process (process 2 and 3)
     have process 2 
         do syskill signal 31 to process 1.
         do syskill signal 28 to process 1.
     sysyield
-        handler runs and signal 31 should run first then singnal 28
+        handler run with trampoline code and signal 31 should run first then singnal 28
         test passes:
             sample output is: signal 1 running
-            sample output is: signal 2 running
-    set handler that prints "this is signal2" at signal 31 for process
-    set handler that prints "this is signal1" at signal 28 using oldhandler from 31.
+                              signal 2 running
+    set handler that prints "signal 2 is running" at signal 31 for process 1
+    set handler that prints "signal 1 is running" at signal 28 using oldhandler from 31 for process 1.
 
     created two more process (process 4 and 5)
+    have process 4:
         do syskill signal 31 to process 1
         do syskill signal 28 to process 1 
             test passes:
                 sample output is: signal 2 running
-                sample output is: signal 1 running
+                                  signal 1 running
     
-    this test prioritazation 31 always prints before 28. 
-    test syskill we send singal from process to process
-    test sighandler we use it to set specific signal and use the oldhadler to set also.
+    this test prioritazation: 31 always prints before 28. 
+    test syskill: we send singal from process to process and set up handler using the trampoline.
+    test sighandler we use it to set specific signal that print, and use the oldhadler to set a new handler.
 
+ Testing:
+ 5) sysopen invalid arguments.
+    create process, have prcess open device with a major number that is not part of divice table.
+    test passes, -1 is returned
+        sample out put: error opening device.
 
+ Testing:
+ 6). syswrite with invalid fd
+    created frocess, opend device with major number 0 save the fd returned.
+    attempt a syswrtie with fd + 1.
+    test passed
+        sample output is: invalid fd, -1 returned.
+ 
+ Testing:
+ 7). sysioctl test for invalid arguments
+    created process, open device with major number 0,
+    make call to sysioctl with command 50(invalid command)
+    test passed
+        sample output is: ivalid command, not in range for this device, -1 returned.
 
-testing sysread and sysioctl:
+ Testing:
+ 8). sysread when more character buffered in kernal than read request
+    created proces, open device with major number 1.
+    sysread specifying int bufflen of 1
+    have shell as for input, type in four charcers.
+    passes test
+        only one charcater printed and checked to be in buffered passed by sysread.
+    
+Testing other:
     running the shell, we tested sysread by taking input from the keyboard user
     both echo on and echo off.. buffer from sysread compared agaist buffer made 
     with the user input and buffers matched exacly.
