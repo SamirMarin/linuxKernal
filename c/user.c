@@ -7,9 +7,9 @@
 #define BUF_MAX 100
 char *username = "cs415\n";
 char *password = "EveryoneGetsAnA\n";
-char *ps = "ps\n"
-char *ex = "ex\n"
-char *k = "k\n"
+char *ps = "ps\n";
+char *ex = "ex\n";
+char *k = "k\n";
 
 
 void shell(void);

@@ -38,6 +38,7 @@ int kb_open(const struct devsw* const dvBlock, int majorNum) {
         // Make sure echo is turned off
         TOGGLE_ECHO = 1;
     }
+    kBytesRead = 0;
     KB_IN_USE = 1;
     EOFINDICATOR = 0x4;//standard EOF
     EOFFLAG = 0;
@@ -158,13 +159,8 @@ int kbd_read_in() {
         // Copy as much from the buffer into the dataRequest
         bytesRead = copyCharactersToBuffer(buff, size, bytesRead, &kbuf[0], MAX_KBUF_SIZE, &kBytesRead);
         kbDataRequest.bytesRead = bytesRead;
-        if (bytesRead == size || character == '\n') {
+        if (bytesRead == size || character == '\n'|| character == EOFINDICATOR) {
             kbDataRequest.done();
-        } else if (state == INCTL && character == EOFINDICATOR) {
-            kprintf("CTRL-D/EOF DETECTED!!!\n");
-        // Disable interrupts
-            enable_irq(1,1);
-            EOFFLAG = 1;
         }
     }
     return 0;
