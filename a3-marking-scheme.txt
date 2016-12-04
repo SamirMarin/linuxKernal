@@ -1,0 +1,245 @@
+Total before late penalty [/68]
+
+
+Functionality/Design  [/30]
+
+(a) Signaling system: 9
+
+   [/1] - set up default behaviour
+   [/1] - syskill implementation  
+   [/1] - syssighandler implementation
+   [/1] - sigreturn 
+   [/2] - building of stack - prioritizing signals - blocking out
+   [/1] - handles kill to sleeping process
+   [/1] - handles kill to a read process doing a read
+   [/1] - trampoline setup/code
+
+
+(b) Keyboard: 
+   DII: [/6]
+   [/1] - Device table
+   [/1] - FD in PCB
+   [/1] - DII open hunting down FD etc 
+   [/1] - DII close - returning FD slot for use
+   [/1] - DII read 
+   [/1] - DII write
+
+  IOCTL needs for the echo 
+    Keyboard specific [/9]
+   [/1] - open - 1 keyboard mode 
+   [/1] - close - cleans up and allows keyboard to be reused
+   [/1] - write - should be failure
+   [/1] - read handles buffer filling
+   [/1] - read on empty buffer
+   [/1] - read returns upon carriage return 
+   [/1] - handles EOF properly
+   [/1] - uses interrupts 
+   [/1] - can produce capital letters
+
+
+(c) Test
+    Init program [/6]
+      [/1] Prints banner 
+      [/1] Handles prompt for username and echoes username
+      [/1] Handles prompt for password and does not echo
+      [/1] Only logs in if valid username/password
+      [/1] Launches shell, if logged in
+      [/1] Reprompts
+
+   Shell program [/9]
+      [/1] - buitlin command ps
+      [/1] - builtin command ex
+      [/1] - builtin command k
+      [/1] - a - alarm command 
+      [/1] - starts the t process
+      [/1] - interrupt of a read by a signal
+      [/1] - handles the &
+      [/1] - handles unsupported commands
+      [/1] - if no & waits for process to end before reprompting
+
+
+
+Test Cases: 1 points each total of [/9]. 
+
+The output was to handed in, in a file named testdoc.txt. For the 1
+mark each test must be appropriately delineated and identified. There
+needs to be a description of what the test is supposed to show and
+what it does (0.5 mark). There should be test output and
+interpretation of the results (0.5 mark). The tests do not have to be
+passed. The 9 test cases are as follows:
+
+
+[ /1] 1. Test showing prioritization of signals
+[ /1] 2. syssighandler() test case
+[ /1] 3. syssigwait() test case
+[ /1] 4. sysopen() with invalid arguments
+[ /1] 5. syswrite() with an invalid file file descriptor
+[ /1] 6. sysioctl() test for invalid commands
+[ /1] 7. sysread() when there are more characters buffered in 
+   kernel than the read requests
+[ /2] 8. Two test cases for scenarios not covered here or in the test program.
+
+
+
+Broad marking criteria   [/11]
+
+
+A detailed description of what is being looked for in this section can
+be found towards the bottom of this file.
+
+
+
+------
+Readability 
+
+   Criteria:
+
+      3 marks - Code is "clean", understandable and well organized,
+      with no major issues. 
+     
+
+      2   There may be minor issues with consistency of indentation and
+       use of white space. variable naming or general
+       organization. Although annoying, this does not have a major
+       impact on readability. 
+
+      1  marks - There are major issues with indentation, whitespace,
+      variable naming
+
+      0  Marks there are major problems across multiple categories
+      with respect to readability 
+
+
+Readability Score [/3]
+-----
+
+
+Documentation 
+
+    Criteria: 
+      3 marks  - Code is well and completely commented
+      
+      2 marks  - One or two places could benefit from some additional
+      comments to add clarity to what is being done. 
+
+      1 mark - Multiple locations where sections of code are
+      uncommented or comments aren't helpful 
+
+      0  Few or no helpful comments. 
+
+
+Documentation Score [/3]
+     
+-------
+
+
+Code Quality
+
+     Criteria 
+       3 marks  - Uniformly good choices of algorithms and data
+       structures across all aspects of the solution
+
+       2 marks - Good choice of algorithms or data structures except
+       for 1 or 2 situations where some improvement is possible
+
+       1  - Poor algorithms or data structure choice in multiple
+       situations and major improvement is possible.
+
+       0 Consistently poor algorithm and data structure choices.
+plus
+       2 code compiles without warnings
+
+Code Quality Score [/5]
+
+
+———————————
+
+Description of the expectations with respect to the broad marking
+criteria
+
+
+READABILITY 
+   It is important that your code is readable not only when you write
+   but at some later time and it also needs to be readable by a
+   knowledgeable third (i.e. a TA, someone else in the class :-). In
+   essence a knowledgeable third party would be someone capable of
+   reading the code and be broadly familiar with a typical solution
+   approach but might not be familiar with the subtle nuances of the
+   algorithm you have developed/used and how it manifests itself in
+   the code. To make your code readable it is important to consider
+   the following sorts of things:
+
+   * Make sure to use indention in a consistent fashion. In particular
+     make sure that you don't use tabs as just how they are displayed
+     depends upon a lot of things. You might have your tabs set to be
+     2 spaces while someone else might have it set at 8 spaces or vary
+     across the line and those differences will affect readability. 
+
+   * Keeps lines to a reasonable link. Many display devices are
+     optimized for looking at code that has no more than 80 characters
+     on a line. 
+
+   * Use white space (blank lines, spaces) to separate distinct blocks
+     of code. Certainly you want blank lines (and some other stuff)
+     between functions and within blocks of code in a function that
+     perform a related task.
+
+   * Make sure that your variables have meaningful names that suggest
+     the type of information the variable holds and is purpose. The
+     only exception (sometimes) is if the variable is loop index.
+
+   * Make sure that functions also have meaningful names and are
+     organized in a meaningful way. Code used multiple times is to be
+     encapsulated into functions. 
+
+Documenting your code:
+
+   Every file provided to you that you need to add substantial content
+   to, or any file containing code that you add to the git project is
+   to start with a comment describing the purpose of this code from a
+   high level perspective. (If the file was not substantially empty
+   then add this comments at the point where you started adding your
+   code.)  This comment is to contain:
+   
+   * A list of all the functions/methods that are to be called from
+     outside this file. (i.e. functions/methods used only within this
+     file are not included.) For each of these functions/methods
+     provide a brief description of the function's purpose and what it
+     returns, and, if appropriate, how to interpret any values that
+     might be returned. For example you might indicate that it returns
+     the count of the number of elements in an array or a negative
+     value if an error was encountered.
+
+  * The code itself needs to be well commented, but care needs to be
+    taken to avoid over commenting and affecting readability. The
+    purpose of comments is to assist the reader in understanding what
+    the code is supposed to do and **how** it goes about doing it. To
+    achieve this make sure that there is a comment before each
+    function explaining the purpose of the function, what it expects
+    as inputs and produces as outputs. Within the code you should have
+    comments explaining the purpose of lines of related code.
+
+  * Any unusual or complex algorithms or strategies for solving a
+    problem also need to be documented in the code. In some cases
+    these comments can go before the declaration of the function
+    whereas in other cases the comment belongs with the relevant
+    section of code. To help decide where the comment belongs evaluate
+    the comment with respect to its purpose. If it is a general
+    description of what you are doing and how then put it before the
+    function or maybe even at the start of the file. If it is more
+    related to the code then put it with the code. There need to be
+    sufficient comments so that one doesn't have to read the code in
+    detail to determine what the code is supposed to be doing.
+
+
+Code Quality
+
+    There are often many poor or inefficient ways to write
+    a program to solve a problem and typically only a few good or
+    reasonable ways. A good way needs to balance efficiency across the
+    dimensions of memory usage to hold the code and/or data, the
+    amount of CPU time used by the program, and maintainability. In
+    class (or tutorials) we will often discuss certain ways of doing
+    something and why. If you deviate from these in any significant
+    way it is important to justify these changes.
+
