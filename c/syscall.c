@@ -14,7 +14,7 @@ int syscall3(int call, ... );
 int syscall4(int call, ... );
 void sysyield( void );
 unsigned int syscreate( void (*func)(void), int stack);
-void sysstop( void );
+void sysstop( void *cntx );
 int sysgetpid( void );
 void sysputs(char *str);
 int syskill(int pid, int signalNumber);
@@ -123,7 +123,7 @@ void sysyield( void ){
     syscall(YIELD);
 }
 
-void sysstop( void ){
+void sysstop( void* cntx ){
     syscall(STOP);
 }
 

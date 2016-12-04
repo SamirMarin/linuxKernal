@@ -197,7 +197,7 @@ extern int createIdle(void (*func)(void), int stackSize);
 extern int syscall(int call);
 extern int syscall2(int call, ...);
 extern void sysyield(void);
-extern void sysstop(void);
+extern void sysstop(void *cntx);
 extern unsigned int syscreate(void (*func)(void), int stack);
 extern int sysgetpid( void );
 extern void sysputs(char *str);
