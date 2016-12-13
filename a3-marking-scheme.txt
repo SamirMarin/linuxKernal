@@ -1,4 +1,5 @@
 Total before late penalty [49/59]
+    ***Total after 6.86% late penalty is 45.63
 
       Well done! I wish you a happy winter holiday period!
 
@@ -279,4 +280,5 @@ Code Quality
     class (or tutorials) we will often discuss certain ways of doing
     something and why. If you deviate from these in any significant
     way it is important to justify these changes.
+
 
