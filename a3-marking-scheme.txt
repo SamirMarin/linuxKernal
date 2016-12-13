@@ -1,11 +1,11 @@
-Total before late penalty [58/68]
+Total before late penalty [49/59]
 
       Well done! I wish you a happy winter holiday period!
 
       Marked by JS
 
 
-Functionality/Design  [/30]
+Functionality/Design  [33/39]
 
 (a) Signaling system: 9/9
 1   [/1] - set up default behaviour
